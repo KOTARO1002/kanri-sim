@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>管理費・修繕積立金 適正額シミュレーター</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f4f0; --panel:#fff; --ink:#1b1b19; --ink2:#5c5a54; --ink3:#95928b;
+  --line:#e4e1da; --line2:#f0eee8;
+  --ac:#1f4e46; --ac2:#e7f0ed;
+  --lo:#c7442f; --loS:#fbeae7;
+  --mid:#d99a2b; --midS:#fcf3e2;
+  --ok:#2d7a5f; --okS:#e6f2ec;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;
+  font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans",-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",Meiryo,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:26px 18px 64px}
+.hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:.01em}
+.sub{color:var(--ink3);font-size:11.5px;margin-top:3px}
+.logo{height:32px;width:auto;flex:none;margin-top:2px}
+.acts{display:flex;gap:8px;margin-top:11px}
+.btn{appearance:none;border:1px solid var(--line);background:#fff;color:var(--ink2);padding:7px 14px;
+  border-radius:7px;font-size:12.5px;font-family:inherit;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--ac2);border-color:var(--ac);color:var(--ac)}
+.btn.primary{background:var(--ac);border-color:var(--ac);color:#fff}
+
+.grid{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.cap{font-size:10.5px;letter-spacing:.1em;color:var(--ink3);font-weight:700;margin:0 0 10px}
+
+/* 入力 */
+.f{margin-bottom:10px}
+label{display:block;font-size:11.5px;color:var(--ink2);font-weight:600;margin-bottom:4px}
+input[type=number],select{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:6px;
+  background:#fff;color:var(--ink);font-size:14.5px;font-family:inherit}
+input:focus,select:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
+.r2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.ck{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink2);margin-top:7px}
+.ck input{width:15px;height:15px;accent-color:var(--ac)}
+.hr{height:1px;background:var(--line2);margin:14px 0}
+
+/* 条件チップ */
+.cond{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{background:#fff;border:1px solid var(--line);border-radius:99px;padding:3px 11px;font-size:11.5px;color:var(--ink2)}
+.chip b{color:var(--ink);font-weight:700;margin-left:5px}
+
+/* ヒーロー */
+.hero{background:var(--ac);color:#fff;border-radius:14px;padding:18px 20px 16px;margin-bottom:14px}
+.hero .lbl{font-size:11px;letter-spacing:.09em;opacity:.7}
+.hero .big{font-size:34px;font-weight:700;line-height:1.15;letter-spacing:-.015em;margin-top:2px}
+.hero .big em{font-style:normal;font-size:15px;font-weight:500;opacity:.8;margin-left:8px}
+.hero .sub2{font-size:12px;opacity:.8;margin-top:3px}
+
+/* ゲージ */
+.gz{margin:26px 0 6px;position:relative}
+.gtrack{height:22px;border-radius:5px;overflow:hidden;display:flex;border:1px solid var(--line)}
+.gseg{height:100%}
+.gticks{position:relative;height:16px;margin-top:4px}
+.gtick{position:absolute;transform:translateX(-50%);font-size:10.5px;color:var(--ink3);white-space:nowrap;font-variant-numeric:tabular-nums}
+.gtick b{color:var(--ink2)}
+.gzl{position:relative;height:14px;margin-top:2px}
+.gzlab{position:absolute;transform:translateX(-50%);font-size:9.5px;font-weight:700;letter-spacing:.04em}
+.gpin{position:absolute;top:-24px;transform:translateX(-50%);text-align:center;z-index:2}
+.gpin .v{background:var(--ink);color:#fff;border-radius:5px;padding:2px 8px;font-size:12px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+.gpin .n{width:2px;height:30px;background:var(--ink);margin:0 auto}
+
+.verdict{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 0}
+.vbadge{font-size:15px;font-weight:700;padding:5px 16px;border-radius:8px}
+.v-ok{background:var(--okS);color:var(--ok)}
+.v-mid{background:var(--midS);color:var(--mid)}
+.v-lo{background:var(--loS);color:var(--lo)}
+.vnote{font-size:12px;color:var(--ink2)}
+
+/* 統計3連 */
+.st3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+.st{background:var(--loS);border-radius:9px;padding:9px 11px;text-align:center}
+.st .t{font-size:10.5px;color:var(--lo);opacity:.85}
+.st .v{font-size:17px;font-weight:700;color:var(--lo);line-height:1.25;font-variant-numeric:tabular-nums}
+
+/* フロー */
+.flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.fs{flex:1;min-width:92px;background:var(--line2);border-radius:8px;padding:8px 9px;position:relative;margin-right:13px}
+.fs:last-child{margin-right:0;background:var(--ac2)}
+.fs::after{content:"";position:absolute;right:-11px;top:50%;transform:translateY(-50%);
+  border-left:7px solid var(--line);border-top:6px solid transparent;border-bottom:6px solid transparent}
+.fs:last-child::after{display:none}
+.fs .t{font-size:9.5px;color:var(--ink3);letter-spacing:.03em}
+.fs .v{font-size:14px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.fs:last-child .v{color:var(--ac)}
+
+/* 比較バー */
+.cbar{margin-top:5px}
+.cbar .row{display:grid;grid-template-columns:130px 1fr 86px;align-items:center;gap:9px;margin-bottom:7px}
+.cbar .nm{font-size:11.5px;color:var(--ink2)}
+.cbar .tk{height:16px;background:var(--line2);border-radius:4px;overflow:hidden}
+.cbar .fl{height:100%;border-radius:4px}
+.cbar .vl{font-size:12px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+
+/* 積立方式 */
+.stack{height:22px;border-radius:5px;overflow:hidden;display:flex;margin-top:4px}
+.stack div{height:100%;display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;color:#fff}
+.lg{display:flex;gap:14px;font-size:10.5px;color:var(--ink3);margin-top:6px}
+.lg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;font-style:normal}
+
+/* 警告 */
+.alerts{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.al{font-size:11.5px;border-radius:7px;padding:7px 11px;line-height:1.5}
+.al-w{background:var(--midS);color:#8a5a12}
+.al-i{background:var(--ac2);color:var(--ac)}
+.sec{margin-top:20px}
+.sec .cap{margin-bottom:9px}
+.foot{margin-top:20px;font-size:10px;color:var(--ink3);line-height:1.6}
+.print-head,.print-foot{display:none}
+.res-grid{display:block}
+
+/* ===== 印刷 A4横 1枚 ===== */
+@media print{
+  @page{size:A4 landscape;margin:7mm 8mm}
+  :root{padding:0}
+  html,body{background:#fff}
+  body{font-size:7.4pt;line-height:1.38;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .wrap{max-width:none;padding:0}
+  .hdr,.panel-input,.btn,.foot{display:none !important}
+  .print-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;
+    border-bottom:1.2pt solid var(--ac);padding-bottom:3pt;margin-bottom:5pt}
+  .print-head .pt{font-size:11.5pt;font-weight:700;line-height:1.15}
+  .print-head .ps{font-size:6.2pt;color:var(--ink3);margin-top:1pt}
+  .print-head .logo{height:24px;margin:0;display:block}
+  .cond{gap:4pt;margin-bottom:5pt}
+  .chip{font-size:6.6pt;padding:1.5pt 7pt;border-radius:99px}
+  .res-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:7mm;align-items:start}
+  .panel{border:0.5pt solid var(--line);border-radius:4pt;padding:7pt 8pt;break-inside:avoid}
+  .cap{font-size:6.6pt;margin-bottom:4pt}
+  .hero{padding:8pt 10pt;border-radius:6pt;margin-bottom:5pt}
+  .hero .lbl{font-size:6.4pt}.hero .big{font-size:20pt}.hero .big em{font-size:9pt}
+  .hero .sub2{font-size:7pt}
+  .gz{margin:20pt 0 3pt}
+  .gtrack{height:13pt}.gticks{height:10pt}.gtick{font-size:6.2pt}
+  .gzl{height:9pt}.gzlab{font-size:5.8pt}
+  .gpin{top:-15pt}.gpin .v{font-size:7.4pt;padding:1pt 5pt}.gpin .n{height:19pt}
+  .verdict{margin-top:8pt;gap:7pt}.vbadge{font-size:9.5pt;padding:2.5pt 10pt}.vnote{font-size:7pt}
+  .st3{gap:5pt;margin-top:7pt}.st{padding:5pt 6pt;border-radius:5pt}
+  .st .t{font-size:6.2pt}.st .v{font-size:10.5pt}
+  .fs{padding:5pt 6pt;margin-right:9pt;min-width:0;border-radius:5pt}
+  .fs::after{right:-8pt;border-left-width:5pt;border-top-width:4pt;border-bottom-width:4pt}
+  .fs .t{font-size:5.8pt}.fs .v{font-size:8pt}
+  .cbar .row{grid-template-columns:92pt 1fr 58pt;gap:6pt;margin-bottom:4pt}
+  .cbar .nm{font-size:6.8pt}.cbar .tk{height:10pt}.cbar .vl{font-size:7.4pt}
+  .stack{height:13pt}.stack div{font-size:6.2pt}.lg{font-size:6.2pt;gap:9pt}
+  .al{font-size:6.4pt;padding:4pt 7pt;border-radius:4pt}.alerts{gap:4pt;margin-top:6pt}
+  .sec{margin-top:9pt}
+  .print-foot{display:block;margin-top:5pt;padding-top:3pt;border-top:0.5pt solid var(--line);
+    font-size:5.7pt;line-height:1.4;color:var(--ink3)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hdr">
+  <div>
+    <h1>管理費・修繕積立金 適正額シミュレーター</h1>
+    <div class="sub">国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠</div>
+    <div class="acts">
+      <button class="btn primary" id="printBtn">A4横で印刷</button>
+      <button class="btn" id="copyBtn">テキストでコピー</button>
+    </div>
+  </div>
+  <img class="logo" src="data:image/png;base64,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" alt="SIMPLE HOUSE">
+</div>
+
+<div class="grid">
+  <!-- 入力 -->
+  <div class="panel panel-input">
+    <p class="cap">物件情報</p>
+    <div class="r2">
+      <div class="f"><label>築年（西暦）</label><input type="number" id="year" value="1999" min="1960" max="2030"></div>
+      <div class="f"><label>地上階数</label><input type="number" id="floors" value="10" min="2" max="60"></div>
+    </div>
+    <div class="f"><label>総戸数</label><input type="number" id="units" value="134" min="2" max="3000"></div>
+    <div class="r2">
+      <div class="f"><label>平均専有 ㎡</label><input type="number" id="avgArea" value="70" min="15" max="250" step="0.01"></div>
+      <div class="f"><label>対象住戸 ㎡</label><input type="number" id="myArea" value="70" min="15" max="250" step="0.01"></div>
+    </div>
+    <div class="f"><label>共用部込み係数</label>
+      <select id="coef">
+        <option value="0.80">0.80 外廊下・共用施設少</option>
+        <option value="0.78" selected>0.78 標準</option>
+        <option value="0.75">0.75 内廊下・施設充実</option>
+      </select></div>
+    <div class="f"><label>建築延床 ㎡（実数が分かれば）</label>
+      <input type="number" id="floorAreaDirect" placeholder="空欄＝推定" min="100"></div>
+
+    <div class="hr"></div>
+    <p class="cap">機械式駐車場</p>
+    <div class="f"><label>機種</label>
+      <select id="mechType">
+        <option value="0">なし</option>
+        <option value="6450">2段昇降式（6,450円/台）</option>
+        <option value="5840">3段昇降式（5,840円/台）</option>
+        <option value="7210">3段昇降横行式（7,210円/台）</option>
+        <option value="6235">4段昇降横行式（6,235円/台）</option>
+        <option value="4645">垂直循環式（4,645円/台）</option>
+        <option value="5235">不明・その他（5,235円/台）</option>
+      </select></div>
+    <div class="f"><label>台数</label><input type="number" id="mechCount" value="0" min="0" max="1000"></div>
+    <label class="ck"><input type="checkbox" id="mechSeparate">駐車場会計を区分経理（加算しない）</label>
+
+    <div class="hr"></div>
+    <p class="cap">現況（任意）</p>
+    <div class="r2">
+      <div class="f"><label>修繕積立金 円/月</label><input type="number" id="curRepair" placeholder="12000" min="0" step="100"></div>
+      <div class="f"><label>管理費 円/月</label><input type="number" id="curMgmt" placeholder="11000" min="0" step="100"></div>
+    </div>
+    <div class="f"><label>積立方式</label>
+      <select id="method">
+        <option value="unknown">不明</option>
+        <option value="flat">均等積立方式</option>
+        <option value="step">段階増額積立方式</option>
+      </select></div>
+  </div>
+
+  <!-- 結果 -->
+  <div>
+    <div class="print-head">
+      <div>
+        <div class="pt">管理費・修繕積立金 適正額試算</div>
+        <div class="ps">国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠<span id="printDate"></span></div>
+      </div>
+      <img class="logo" src="data:image/png;base64,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" alt="SIMPLE HOUSE">
+    </div>
+
+    <div class="cond" id="cond"></div>
+
+    <div class="res-grid">
+      <div>
+        <div class="hero">
+          <div class="lbl">修繕積立金の適正額（ガイドライン平均値）</div>
+          <div class="big" id="heroYen">—</div>
+          <div class="sub2" id="heroSub">—</div>
+        </div>
+
+        <div class="panel">
+          <p class="cap">修繕積立金 水準</p>
+          <div id="gauge1"></div>
+          <div class="verdict" id="verdict1"></div>
+          <div class="st3" id="gap3"></div>
+        </div>
+
+        <div class="panel sec">
+          <p class="cap">管理費 水準</p>
+          <div id="gauge2"></div>
+          <div class="verdict" id="verdict2"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <p class="cap">算定フロー</p>
+          <div class="flow" id="flow"></div>
+        </div>
+
+        <div class="panel sec">
+          <p class="cap">実勢との比較（修繕積立金・円/㎡・月）</p>
+          <div class="cbar" id="cbar"></div>
+        </div>
+
+        <div class="panel sec">
+          <p class="cap">同築年帯の積立方式（全国）</p>
+          <div class="stack" id="stack"></div>
+          <div class="lg"><span><i style="background:var(--ac)"></i>均等</span><span><i style="background:#d99a2b"></i>段階増額</span><span><i style="background:#c9c5bc"></i>その他・不明</span></div>
+        </div>
+
+        <div class="alerts" id="alerts"></div>
+      </div>
+    </div>
+
+    <div class="print-foot">
+      出典：国土交通省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。<strong>管理費に国の㎡単価目安は存在せず</strong>、本表の管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値です。簡易試算のため、確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。／株式会社シンプルハウス
+    </div>
+
+    <div class="foot">
+      出典：国交省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。
+      目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。
+      <strong>管理費に国の㎡単価目安は存在しません</strong>（本ツールの管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値）。
+      確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const TIERS=[
+ {label:'20階未満・5千㎡未満',avg:335,lo:235,hi:430},
+ {label:'20階未満・5千〜1万㎡',avg:252,lo:170,hi:320},
+ {label:'20階未満・1万〜2万㎡',avg:271,lo:200,hi:330},
+ {label:'20階未満・2万㎡以上',avg:255,lo:190,hi:325},
+ {label:'20階以上',avg:338,lo:240,hi:410}];
+const BOUNDS=[5000,10000,20000];
+const tIdx=a=>a<5000?0:a<10000?1:a<20000?2:3;
+const mgR=u=>u<=30?[200,250]:u<=80?[170,220]:u<=150?[150,180]:u<=300?[130,160]:[120,155];
+function mk(y){
+ if(y<=1984)return{l:'〜1984年',r:11685,f:61.4,s:20.7};
+ if(y<=1994)return{l:'1985〜94年',r:13163,f:52.4,s:34.8};
+ if(y<=2004)return{l:'1995〜2004年',r:14317,f:44.0,s:44.7};
+ if(y<=2014)return{l:'2005〜14年',r:13485,f:24.8,s:65.9};
+ return{l:'2015年〜',r:12200,f:11.0,s:81.2,est:true};}
+const Y=n=>Math.round(n).toLocaleString('ja-JP');
+const N=n=>(Math.round(n*10)/10).toLocaleString('ja-JP');
+const v=id=>{const x=parseFloat(document.getElementById(id).value);return isFinite(x)?x:0};
+const raw=id=>document.getElementById(id).value.trim();
+let txt='';
+
+function gauge(lo,avg,hi,cur,unit){
+  const max=Math.max(hi*1.18, cur?cur*1.12:0);
+  const p=x=>Math.max(0,Math.min(100,x/max*100));
+  const pLo=p(lo),pAvg=p(avg),pHi=p(hi);
+  let pin='';
+  if(cur){const pc=p(cur);
+    pin=`<div class="gpin" style="left:${pc}%"><div class="v">現況 ${N(cur)}</div><div class="n"></div></div>`;}
+  return `<div class="gz">${pin}
+    <div class="gtrack">
+      <div class="gseg" style="width:${pLo}%;background:var(--loS)"></div>
+      <div class="gseg" style="width:${pAvg-pLo}%;background:#cfe3d8"></div>
+      <div class="gseg" style="width:${pHi-pAvg}%;background:#a9cfbb"></div>
+      <div class="gseg" style="width:${100-pHi}%;background:var(--ac2)"></div>
+    </div>
+    <div class="gticks">
+      <div class="gtick" style="left:${pLo}%">下限 <b>${N(lo)}</b></div>
+      <div class="gtick" style="left:${pAvg}%">平均 <b>${N(avg)}</b></div>
+      <div class="gtick" style="left:${pHi}%">上限 <b>${N(hi)}</b></div>
+    </div>
+    <div class="gzl">
+      <div class="gzlab" style="left:${pLo/2}%;color:var(--lo)">不足</div>
+      <div class="gzlab" style="left:${(pLo+pHi)/2}%;color:var(--ok)">適正レンジ</div>
+    </div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:2px">${unit}</div>
+  </div>`;
+}
+
+function calc(){
+ const year=v('year'),units=v('units'),floors=v('floors'),avgA=v('avgArea');
+ const myA=v('myArea')||avgA, coef=parseFloat(document.getElementById('coef').value);
+ const dir=raw('floorAreaDirect');
+ const mRate=parseFloat(document.getElementById('mechType').value)||0, mCnt=v('mechCount');
+ const mSep=document.getElementById('mechSeparate').checked;
+ const cR=raw('curRepair')?v('curRepair'):null, cM=raw('curMgmt')?v('curMgmt'):null;
+ const method=document.getElementById('method').value;
+ if(units<2||avgA<=0)return;
+
+ const tot=units*avgA, isDir=dir!==''&&parseFloat(dir)>0;
+ const fa=isDir?parseFloat(dir):tot/coef, tower=floors>=20;
+ const ti=tower?4:tIdx(fa), T=TIERS[ti];
+ const addOn=(!mSep&&mRate>0&&mCnt>0), add=addOn?mRate*mCnt/tot:0;
+ const avg=T.avg+add, lo=T.lo+add, hi=T.hi+add;
+ const [gL,gH]=mgR(units);
+ const M=mk(year);
+
+ // 条件チップ
+ const mt=(mRate>0&&mCnt>0)?`${Y(mCnt)}台${mSep?'･区分経理':''}`:'なし';
+ document.getElementById('cond').innerHTML=
+  `<span class="chip">築年<b>${Y(year)}年</b></span>`+
+  `<span class="chip">総戸数<b>${Y(units)}戸</b></span>`+
+  `<span class="chip">地上<b>${Y(floors)}階</b></span>`+
+  `<span class="chip">平均専有<b>${N(avgA)}㎡</b></span>`+
+  `<span class="chip">対象住戸<b>${N(myA)}㎡</b></span>`+
+  `<span class="chip">建築延床<b>${Y(fa)}㎡</b></span>`+
+  `<span class="chip">機械式<b>${mt}</b></span>`+
+  `<span class="chip">積立方式<b>${{unknown:'不明',flat:'均等',step:'段階増額'}[method]}</b></span>`;
+
+ // ヒーロー
+ document.getElementById('heroYen').innerHTML=`月 ${Y(avg*myA)} 円<em>${N(avg)} 円/㎡</em>`;
+ document.getElementById('heroSub').textContent=
+   `適正レンジ 月 ${Y(lo*myA)}〜${Y(hi*myA)} 円　／　専有 ${N(myA)}㎡`;
+
+ // ゲージ1
+ document.getElementById('gauge1').innerHTML=
+   gauge(lo,avg,hi,cR?cR/myA:null,'円/㎡・月　ガイドライン目安');
+
+ // 判定
+ let vh='';
+ if(cR){
+   const cu=cR/myA;
+   let cls,lab,msg;
+   if(cu>=avg){cls='v-ok';lab='十分';msg='ガイドライン平均値以上';}
+   else if(cu>=lo){cls='v-ok';lab='適正圏';msg='レンジ内・余裕は薄い';}
+   else if(cu>=lo*0.6){cls='v-mid';lab='不足の可能性';msg='値上げ・一時金リスクあり';}
+   else{cls='v-lo';lab='要警戒';msg='合意形成が難航しやすい水準';}
+   vh=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cR)}円＝${N(cu)}円/㎡・${msg}</span>`;
+   const gap=Math.max(0,avg-cu)*myA;
+   document.getElementById('gap3').innerHTML= gap>0?
+     `<div class="st"><div class="t">平均まで不足／月</div><div class="v">${Y(gap)}円</div></div>
+      <div class="st"><div class="t">同／年</div><div class="v">${Y(gap*12)}円</div></div>
+      <div class="st"><div class="t">同／10年</div><div class="v">${Y(gap*120)}円</div></div>`
+     :`<div class="st" style="grid-column:1/-1;background:var(--okS)"><div class="t" style="color:var(--ok)">平均値を満たしています</div><div class="v" style="color:var(--ok)">不足なし</div></div>`;
+ }else{
+   vh=`<span class="vnote">現況の修繕積立金を入力すると判定します</span>`;
+   document.getElementById('gap3').innerHTML='';
+ }
+ document.getElementById('verdict1').innerHTML=vh;
+
+ // ゲージ2（管理費）
+ document.getElementById('gauge2').innerHTML=
+   gauge(gL,(gL+gH)/2,gH,cM?cM/myA:null,'円/㎡・月　推計レンジ（国の目安なし）');
+ let v2=`<span class="vnote">目安 月 ${Y(gL*myA)}〜${Y(gH*myA)} 円（${gL}〜${gH}円/㎡）</span>`;
+ if(cM){
+   const cu=cM/myA;
+   const [cls,lab]= cu>gH?['v-mid','レンジ超']: cu<gL?['v-ok','レンジ未満']:['v-ok','レンジ内'];
+   v2=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cM)}円＝${N(cu)}円/㎡　目安 ${gL}〜${gH}円/㎡</span>`;
+ }
+ document.getElementById('verdict2').innerHTML=v2;
+
+ // フロー
+ document.getElementById('flow').innerHTML=
+  `<div class="fs"><div class="t">専有合計</div><div class="v">${Y(tot)}㎡</div></div>
+   <div class="fs"><div class="t">建築延床${isDir?'':'（÷'+coef+'）'}</div><div class="v">${Y(fa)}㎡</div></div>
+   <div class="fs"><div class="t">適用区分</div><div class="v" style="font-size:12px">${T.label}</div></div>
+   <div class="fs"><div class="t">㎡単価${add?'（＋機械式'+N(add)+'）':''}</div><div class="v">${N(avg)}円</div></div>
+   <div class="fs"><div class="t">月額（${N(myA)}㎡）</div><div class="v">${Y(avg*myA)}円</div></div>`;
+
+ // 実勢比較バー
+ const mkU=M.r/70;
+ const rows=[
+  {n:'本物件のガイドライン目安',x:avg,c:'var(--ac)'},
+  {n:`実勢 ${M.l}完成${M.est?'※':''}`,x:mkU,c:'#d99a2b'},
+  {n:'実勢 全国平均（全築年）',x:13054/70,c:'#c9c5bc'}];
+ if(cR)rows.unshift({n:'この物件の現況',x:cR/myA,c:'#1b1b19'});
+ const mx=Math.max(...rows.map(r=>r.x))*1.1;
+ document.getElementById('cbar').innerHTML=rows.map(r=>
+  `<div class="row"><div class="nm">${r.n}</div>
+   <div class="tk"><div class="fl" style="width:${r.x/mx*100}%;background:${r.c}"></div></div>
+   <div class="vl">${N(r.x)} 円/㎡</div></div>`).join('');
+
+ // 積立方式
+ const other=Math.max(0,100-M.f-M.s);
+ document.getElementById('stack').innerHTML=
+  `<div style="width:${M.f}%;background:var(--ac)">${M.f}%</div>
+   <div style="width:${M.s}%;background:#d99a2b">${M.s}%</div>
+   <div style="width:${other}%;background:#c9c5bc">${other.toFixed(1)}%</div>`;
+
+ // 警告（短く）
+ let al=[];
+ if(!tower){let nb=null;BOUNDS.forEach((b,i)=>{if(Math.abs(fa-b)/b<=0.15)nb={b,i}});
+  if(nb){const o=TIERS[fa<nb.b?nb.i+1:nb.i];
+   if(o&&o.label!==T.label)al.push(['w',`区分境界（${Y(nb.b)}㎡）付近。隣接区分なら ${N(o.avg+add)}円/㎡。<b>${N(Math.min(avg,o.avg+add))}〜${N(Math.max(avg,o.avg+add))}円/㎡</b> の幅で見てください。`]);}}
+ if(floors>=18&&floors<=22)al.push(['w','20階の境界付近。20階以上は目安が大きく上がるため階数の実数確認が必要です。']);
+ if(cR&&(method==='step'||(method==='unknown'&&year>=2005)))
+  al.push(['w',`判定は暫定。目安は<b>計画期間全体の平均額</b>で今月の徴収額ではありません。同築年帯は段階増額が${M.s}%で、現況が低いのは設計どおりの可能性があります。`]);
+ if(cR&&method==='flat')al.push(['i','均等積立方式のため現況＝計画平均とみなして比較。確度は高めです。']);
+ if(cR&&cR/myA<lo)al.push(['w','下限値は長寿命化促進税制の引上げ基準線。下回る場合は増額決議・一時金の可能性を織り込んでください。']);
+ if(mRate>0&&mCnt>0&&mSep)al.push(['i','機械式は区分経理のため加算していません。']);
+ if(cM)al.push(['i','管理費の超過＝割高ではありません。共用施設の充実度で正当に上振れます。']);
+ document.getElementById('alerts').innerHTML=al.map(a=>`<div class="al al-${a[0]}">${a[1]}</div>`).join('');
+
+ txt=`【管理費・修繕積立金 適正額試算】
+築${Y(year)}年／${Y(units)}戸／地上${Y(floors)}階／平均専有${N(avgA)}㎡／対象${N(myA)}㎡
+専有合計${Y(tot)}㎡ → 建築延床${Y(fa)}㎡${isDir?'(入力値)':'(推定÷'+coef+')'} → ${T.label}
+■修繕積立金 適正額：平均 ${N(avg)}円/㎡・月 ＝ 月${Y(avg*myA)}円
+　適正レンジ ${N(lo)}〜${N(hi)}円/㎡ ＝ 月${Y(lo*myA)}〜${Y(hi*myA)}円${add?`（機械式加算 +${N(add)}円/㎡含む）`:''}
+${cR?`　現況 ${N(cR/myA)}円/㎡（月${Y(cR)}円）／平均まで月${Y(Math.max(0,avg-cR/myA)*myA)}円・年${Y(Math.max(0,avg-cR/myA)*myA*12)}円不足\n`:''}■管理費 目安（推計・国の目安なし）：${gL}〜${gH}円/㎡ ＝ 月${Y(gL*myA)}〜${Y(gH*myA)}円
+${cM?`　現況 ${N(cM/myA)}円/㎡（月${Y(cM)}円）\n`:''}■実勢：${M.l}完成 月${Y(M.r)}円/戸（約${N(mkU)}円/㎡）${M.est?'※推計':''}／全国平均 月13,054円/戸
+※簡易試算。確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。`;
+}
+
+document.querySelectorAll('input,select').forEach(e=>{
+  e.addEventListener('input',calc); e.addEventListener('change',calc);});
+document.getElementById('printBtn').addEventListener('click',()=>{
+  const d=new Date();
+  document.getElementById('printDate').textContent=
+    `　作成日 ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+  window.print();});
+document.getElementById('copyBtn').addEventListener('click',async function(){
+  try{await navigator.clipboard.writeText(txt);this.textContent='コピーしました';}
+  catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();
+    try{document.execCommand('copy');this.textContent='コピーしました';}catch(_){this.textContent='失敗';}
+    document.body.removeChild(t);}
+  setTimeout(()=>{this.textContent='テキストでコピー';},1600);});
+calc();
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+# 管理費・修繕積立金 適正額シミュレーター
+
+国土交通省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）および
+「令和5年度マンション総合調査」に基づく、管理費・修繕積立金の簡易試算ツールです。
+
+外部ライブラリに依存しない単一HTML（ロゴ画像もbase64で埋め込み済み）で構成されており、
+ビルド作業は不要です。そのまま配信するだけで動作します。
+
+## 公開URL
+
+https://kotaro1002.github.io/kanri-sim/
+
+## ローカルで開く方法
+
+`index.html` をブラウザで開くだけで動作します。サーバーは不要です。
+
+```bash
+# WSL / Linux
+xdg-open index.html
+
+# macOS
+open index.html
+
+# Windows
+start index.html
+```
+
+ローカルサーバー経由で確認したい場合:
+
+```bash
+python3 -m http.server 8000
+# → http://localhost:8000/ をブラウザで開く
+```
+
+## 更新手順
+
+`index.html` を新しいものに差し替えて push するだけです。
+数分以内に GitHub Pages へ自動反映されます。
+
+```bash
+cd ~/dev/kanri-sim
+cp /path/to/新しいkanri-tsumitate-sim.html index.html
+git add index.html
+git commit -m "シミュレーターを更新"
+git push
+```
+
+## 公開設定
+
+- 公開ソース: `main` ブランチ / ルート（`/`）
+- 設定場所: GitHub リポジトリの Settings → Pages
+
+## 出典
+
+- 国土交通省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）
+- 国土交通省「令和5年度マンション総合調査」
+
+本ツールの試算結果は簡易的な目安であり、実際の適正額は物件ごとの
+長期修繕計画に基づいて判断してください。
