@@ -115,6 +115,17 @@ input:focus,select:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
 .al{font-size:11.5px;border-radius:7px;padding:7px 11px;line-height:1.5}
 .al-w{background:var(--midS);color:#8a5a12}
 .al-i{background:var(--ac2);color:var(--ac)}
+.al-l{background:var(--loS);color:#a3331f;font-weight:600}
+
+/* 長期修繕計画 Z */
+.zgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:4px 0 8px}
+.zc{background:var(--line2);border-radius:8px;padding:8px 10px}
+.zc .t{font-size:9.5px;color:var(--ink3);letter-spacing:.03em}
+.zc .v{font-size:14px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums}
+.zdep{margin-top:10px}
+.zdep .zt{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-bottom:3px}
+.zbar{height:14px;border-radius:4px;background:var(--line2);overflow:hidden}
+.zbar i{display:block;height:100%;background:var(--mid);font-style:normal}
 .sec{margin-top:20px}
 .sec .cap{margin-bottom:9px}
 .foot{margin-top:20px;font-size:10px;color:var(--ink3);line-height:1.6}
@@ -156,6 +167,14 @@ input:focus,select:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
   .cbar .nm{font-size:6.8pt}.cbar .tk{height:10pt}.cbar .vl{font-size:7.4pt}
   .stack{height:13pt}.stack div{font-size:6.2pt}.lg{font-size:6.2pt;gap:9pt}
   .al{font-size:6.4pt;padding:4pt 7pt;border-radius:4pt}.alerts{gap:4pt;margin-top:6pt}
+  .zgrid{gap:4pt;margin:2pt 0 3pt}.zc{padding:3pt 4pt;border-radius:4pt}
+  .zc .t{font-size:5.6pt}.zc .v{font-size:7.4pt}
+  .zdep{margin-top:4pt}.zdep .zt{font-size:6pt}.zbar{height:7pt}
+  /* Z欄は1ページに収めるため印刷時のみ圧縮 */
+  #zPanel{margin-top:6pt;padding:6pt 8pt}
+  /* 直上の修繕積立金ゲージと同じ目盛りのため、印刷ではZ欄のゲージを省く */
+  #zPanel .gz{display:none}
+  #zPanel .verdict{margin-top:0}#zPanel .vbadge{font-size:8.5pt;padding:2pt 8pt}
   .sec{margin-top:9pt}
   .print-foot{display:block;margin-top:5pt;padding-top:3pt;border-top:0.5pt solid var(--line);
     font-size:5.7pt;line-height:1.4;color:var(--ink3)}
@@ -226,6 +245,17 @@ input:focus,select:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
         <option value="flat">均等積立方式</option>
         <option value="step">段階増額積立方式</option>
       </select></div>
+
+    <div class="hr"></div>
+    <p class="cap">長期修繕計画（重要事項調査報告書）</p>
+    <div class="r2">
+      <div class="f"><label>残高A 万円</label><input type="number" id="lrA" placeholder="空欄＝0" min="0" step="100"></div>
+      <div class="f"><label>計画期間 年</label><input type="number" id="lrY" placeholder="30" min="5" max="60"></div>
+    </div>
+    <div class="f"><label>積立総額B 万円</label>
+      <input type="number" id="lrB" placeholder="空欄＝現況額×戸数×期間で推定" min="0" step="100"></div>
+    <div class="f"><label>繰入額C 万円（駐車場使用料等）</label>
+      <input type="number" id="lrC" placeholder="空欄＝0" min="0" step="100"></div>
   </div>
 
   <!-- 結果 -->
@@ -259,6 +289,11 @@ input:focus,select:focus{outline:2px solid var(--ac2);border-color:var(--ac)}
           <p class="cap">管理費 水準</p>
           <div id="gauge2"></div>
           <div class="verdict" id="verdict2"></div>
+        </div>
+
+        <div class="panel sec" id="zPanel" style="display:none">
+          <p class="cap">長期修繕計画による厳密判定（Z＝(A+B+C)÷X÷Y）</p>
+          <div id="zBody"></div>
         </div>
       </div>
 
@@ -315,17 +350,18 @@ function mk(y){
  return{l:'2015年〜',r:12200,f:11.0,s:81.2,est:true};}
 const Y=n=>Math.round(n).toLocaleString('ja-JP');
 const N=n=>(Math.round(n*10)/10).toLocaleString('ja-JP');
+const MAN=n=>n>=10000?(Math.round(n/100)/100).toLocaleString('ja-JP')+'億円':Y(n)+'万円';
 const v=id=>{const x=parseFloat(document.getElementById(id).value);return isFinite(x)?x:0};
 const raw=id=>document.getElementById(id).value.trim();
 let txt='';
 
-function gauge(lo,avg,hi,cur,unit){
+function gauge(lo,avg,hi,cur,unit,pinLab,loLab){
   const max=Math.max(hi*1.18, cur?cur*1.12:0);
   const p=x=>Math.max(0,Math.min(100,x/max*100));
   const pLo=p(lo),pAvg=p(avg),pHi=p(hi);
   let pin='';
   if(cur){const pc=p(cur);
-    pin=`<div class="gpin" style="left:${pc}%"><div class="v">現況 ${N(cur)}</div><div class="n"></div></div>`;}
+    pin=`<div class="gpin" style="left:${pc}%"><div class="v">${pinLab||'現況'} ${N(cur)}</div><div class="n"></div></div>`;}
   return `<div class="gz">${pin}
     <div class="gtrack">
       <div class="gseg" style="width:${pLo}%;background:var(--loS)"></div>
@@ -339,7 +375,7 @@ function gauge(lo,avg,hi,cur,unit){
       <div class="gtick" style="left:${pHi}%">上限 <b>${N(hi)}</b></div>
     </div>
     <div class="gzl">
-      <div class="gzlab" style="left:${pLo/2}%;color:var(--lo)">不足</div>
+      <div class="gzlab" style="left:${pLo/2}%;color:var(--lo)">${loLab||'不足'}</div>
       <div class="gzlab" style="left:${(pLo+pHi)/2}%;color:var(--ok)">適正レンジ</div>
     </div>
     <div style="font-size:10.5px;color:var(--ink3);margin-top:2px">${unit}</div>
@@ -367,7 +403,7 @@ function calc(){
  // 条件チップ
  const mt=(mRate>0&&mCnt>0)?`${Y(mCnt)}台${mSep?'･区分経理':''}`:'なし';
  document.getElementById('cond').innerHTML=
-  `<span class="chip">築年<b>${Y(year)}年</b></span>`+
+  `<span class="chip">築年<b>${year}年</b></span>`+
   `<span class="chip">総戸数<b>${Y(units)}戸</b></span>`+
   `<span class="chip">地上<b>${Y(floors)}階</b></span>`+
   `<span class="chip">平均専有<b>${N(avgA)}㎡</b></span>`+
@@ -409,12 +445,16 @@ function calc(){
 
  // ゲージ2（管理費）
  document.getElementById('gauge2').innerHTML=
-   gauge(gL,(gL+gH)/2,gH,cM?cM/myA:null,'円/㎡・月　推計レンジ（国の目安なし）');
+   gauge(gL,(gL+gH)/2,gH,cM?cM/myA:null,'円/㎡・月　推計レンジ（国の目安なし）','現況','レンジ未満');
  let v2=`<span class="vnote">目安 月 ${Y(gL*myA)}〜${Y(gH*myA)} 円（${gL}〜${gH}円/㎡）</span>`;
  if(cM){
    const cu=cM/myA;
-   const [cls,lab]= cu>gH?['v-mid','レンジ超']: cu<gL?['v-ok','レンジ未満']:['v-ok','レンジ内'];
-   v2=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cM)}円＝${N(cu)}円/㎡　目安 ${gL}〜${gH}円/㎡</span>`;
+   let cls,lab,note;
+   if(cu>gH){cls='v-mid';lab='レンジ超';note='共用施設の充実度で正当に上振れます';}
+   else if(cu<gL*0.7){cls='v-lo';lab='著しく低い';note='管理水準そのものの確認が必要です';}
+   else if(cu<gL){cls='v-mid';lab='レンジ未満';note='安い＝良いとは限りません';}
+   else{cls='v-ok';lab='レンジ内';note='';}
+   v2=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cM)}円＝${N(cu)}円/㎡　目安 ${gL}〜${gH}円/㎡${note?'・'+note:''}</span>`;
  }
  document.getElementById('verdict2').innerHTML=v2;
 
@@ -446,8 +486,41 @@ function calc(){
    <div style="width:${M.s}%;background:#d99a2b">${M.s}%</div>
    <div style="width:${other}%;background:#c9c5bc">${other.toFixed(1)}%</div>`;
 
+ // 長期修繕計画によるZ（厳密判定）
+ const zY=v('lrY'), zA=raw('lrA')?v('lrA'):0, zC=raw('lrC')?v('lrC'):0;
+ const zBraw=raw('lrB')?v('lrB'):null;
+ const zP=document.getElementById('zPanel');
+ let zWarn=[], zTxt='';
+ if(zY>0&&(zBraw!==null||cR)){
+   const months=zY*12, bEst=(zBraw===null);
+   const B=bEst? cR*units*months/10000 : zBraw;
+   const total=(zA+B+zC)*10000, Z=total/tot/months;
+   const dep=total>0? zC*10000/total*100 : 0;
+   let zc,zl;
+   if(Z>=avg){zc='v-ok';zl='十分';}
+   else if(Z>=lo){zc='v-ok';zl='適正圏';}
+   else if(Z>=lo*0.6){zc='v-mid';zl='不足の可能性';}
+   else{zc='v-lo';zl='要警戒';}
+   document.getElementById('zBody').innerHTML=
+    `<div class="zgrid">
+       <div class="zc"><div class="t">残高 A</div><div class="v">${MAN(zA)}</div></div>
+       <div class="zc"><div class="t">積立総額 B${bEst?'（推定）':''}</div><div class="v">${MAN(B)}</div></div>
+       <div class="zc"><div class="t">繰入額 C</div><div class="v">${MAN(zC)}</div></div>
+       <div class="zc"><div class="t">期間Y ／ 総専有X</div><div class="v">${Y(zY)}年／${Y(tot)}㎡</div></div>
+     </div>`
+    + gauge(lo,avg,hi,Z,'円/㎡・月　Z＝計画期間全体の平均額','Z')
+    + `<div class="verdict"><span class="vbadge ${zc}">${zl}</span><span class="vnote">Z＝${N(Z)}円/㎡・月（対象住戸 月${Y(Z*myA)}円相当）／目安 平均${N(avg)}円・幅${N(lo)}〜${N(hi)}円</span></div>`
+    + `<div class="zdep"><div class="zt"><span>繰入依存度　C÷(A＋B＋C)</span><span><b>${N(dep)}%</b></span></div>
+       <div class="zbar"><i style="width:${Math.min(100,dep)}%"></i></div></div>`;
+   zP.style.display='';
+   if(bEst)zWarn.push(['w','積立総額Bは<b>現況額が計画期間中ずっと続く前提</b>の推定値です（均等積立方式相当）。段階増額方式では過小評価になります。長期修繕計画のBを入力してください。']);
+   if(dep>=35)zWarn.push(['w',`計画の<b>${N(dep)}%を駐車場使用料等の繰入（C）に依存</b>しています。ガイドラインは「実際に集められている金額を上回る繰入額を見込むことは避けるべき」「駐車場使用料は稼働率で大きく変動する」と明示しています。築古は高齢化・車離れで稼働率が落ちやすく、<b>繰入が減れば即座に不足へ直結します。駐車場稼働率を必ず確認</b>してください。`]);
+   else if(dep>=20)zWarn.push(['i',`計画の${N(dep)}%を駐車場使用料等の繰入（C）で賄う計画です（ガイドラインのモデルケースも約21%で、この水準自体は一般的）。ただし稼働率が落ちると不足に直結するため、駐車場稼働率は確認してください。`]);
+   zTxt=`■Z（計画期間全体の平均額）：${N(Z)}円/㎡・月 → ${zl}\n　A${MAN(zA)} ＋ B${MAN(B)}${bEst?'(推定)':''} ＋ C${MAN(zC)} ÷ X${Y(tot)}㎡ ÷ Y${Y(zY)}年　繰入依存度${N(dep)}%\n`;
+ }else{zP.style.display='none';}
+
  // 警告（短く）
- let al=[];
+ let al=[...zWarn];
  if(!tower){let nb=null;BOUNDS.forEach((b,i)=>{if(Math.abs(fa-b)/b<=0.15)nb={b,i}});
   if(nb){const o=TIERS[fa<nb.b?nb.i+1:nb.i];
    if(o&&o.label!==T.label)al.push(['w',`区分境界（${Y(nb.b)}㎡）付近。隣接区分なら ${N(o.avg+add)}円/㎡。<b>${N(Math.min(avg,o.avg+add))}〜${N(Math.max(avg,o.avg+add))}円/㎡</b> の幅で見てください。`]);}}
@@ -456,17 +529,21 @@ function calc(){
   al.push(['w',`判定は暫定。目安は<b>計画期間全体の平均額</b>で今月の徴収額ではありません。同築年帯は段階増額が${M.s}%で、現況が低いのは設計どおりの可能性があります。`]);
  if(cR&&method==='flat')al.push(['i','均等積立方式のため現況＝計画平均とみなして比較。確度は高めです。']);
  if(cR&&cR/myA<lo)al.push(['w','下限値は長寿命化促進税制の引上げ基準線。下回る場合は増額決議・一時金の可能性を織り込んでください。']);
+ if(cR&&cR/myA<lo&&year<=2004)
+  al.push([year<=1994?'l':'w',`<b>築古×下限未満</b>：${M.l}完成の全国比率は均等${M.f}%／段階増額${M.s}%。段階増額でも${year<=1994?'すでに最終段階に達しているはず':'最終段階に近いはず'}で、<b>「今後上がる予定だから今は安い」では説明できません</b>。工事費高騰が古い計画に未反映でないか、給排水管・EVの更新が目前でないかを長期修繕計画で確認してください。`]);
  if(mRate>0&&mCnt>0&&mSep)al.push(['i','機械式は区分経理のため加算していません。']);
- if(cM)al.push(['i','管理費の超過＝割高ではありません。共用施設の充実度で正当に上振れます。']);
+ if(cM){const cmu=cM/myA;
+  if(cmu<gL)al.push(['w',`管理費が推計レンジ（${gL}〜${gH}円/㎡）を下回ります。<b>安い管理費は管理水準低下のサイン</b>のことがあります。管理員の勤務形態・清掃回数・設備点検頻度・委託契約の内容を確認してください。駐車場使用料からの充当で見かけ上安くなっている場合もあります（全国平均は充当を除くと11,503円、含むと17,103円）。`]);
+  else al.push(['i','管理費の超過＝割高ではありません。共用施設の充実度で正当に上振れます。']);}
  document.getElementById('alerts').innerHTML=al.map(a=>`<div class="al al-${a[0]}">${a[1]}</div>`).join('');
 
  txt=`【管理費・修繕積立金 適正額試算】
-築${Y(year)}年／${Y(units)}戸／地上${Y(floors)}階／平均専有${N(avgA)}㎡／対象${N(myA)}㎡
+築${year}年／${Y(units)}戸／地上${Y(floors)}階／平均専有${N(avgA)}㎡／対象${N(myA)}㎡
 専有合計${Y(tot)}㎡ → 建築延床${Y(fa)}㎡${isDir?'(入力値)':'(推定÷'+coef+')'} → ${T.label}
 ■修繕積立金 適正額：平均 ${N(avg)}円/㎡・月 ＝ 月${Y(avg*myA)}円
 　適正レンジ ${N(lo)}〜${N(hi)}円/㎡ ＝ 月${Y(lo*myA)}〜${Y(hi*myA)}円${add?`（機械式加算 +${N(add)}円/㎡含む）`:''}
 ${cR?`　現況 ${N(cR/myA)}円/㎡（月${Y(cR)}円）／平均まで月${Y(Math.max(0,avg-cR/myA)*myA)}円・年${Y(Math.max(0,avg-cR/myA)*myA*12)}円不足\n`:''}■管理費 目安（推計・国の目安なし）：${gL}〜${gH}円/㎡ ＝ 月${Y(gL*myA)}〜${Y(gH*myA)}円
-${cM?`　現況 ${N(cM/myA)}円/㎡（月${Y(cM)}円）\n`:''}■実勢：${M.l}完成 月${Y(M.r)}円/戸（約${N(mkU)}円/㎡）${M.est?'※推計':''}／全国平均 月13,054円/戸
+${cM?`　現況 ${N(cM/myA)}円/㎡（月${Y(cM)}円）\n`:''}${zTxt}■実勢：${M.l}完成 月${Y(M.r)}円/戸（約${N(mkU)}円/㎡）${M.est?'※推計':''}／全国平均 月13,054円/戸
 ※簡易試算。確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。`;
 }
 
