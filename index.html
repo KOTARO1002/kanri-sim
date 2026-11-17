@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>管理費・修繕積立金 適正額シミュレーター</title>
+<title>管理費・修繕積立金チェッカー</title>
 <style>
 :root{
   color-scheme: light;
@@ -207,6 +207,57 @@ input.miss,select.miss{background:var(--loS);border-color:var(--lo)}
   .print-foot{display:block;margin-top:5pt;padding-top:3pt;border-top:0.5pt solid var(--line);
     font-size:5.7pt;line-height:1.4;color:var(--ink3)}
 }
+
+/* ===== v3：マイソク一括読み取り ===== */
+.drop{display:block;margin-bottom:14px;padding:22px 14px}
+.drop .dt{font-size:16px}
+.drop .dd{font-size:11.5px}
+.drop.busy{pointer-events:none;opacity:.6}
+.ostat{margin:-4px 0 14px}
+#listPanel{margin-bottom:18px}
+.plist{display:flex;flex-direction:column;gap:6px}
+.pi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);
+  border-radius:9px;cursor:pointer;background:#fff}
+.pi:hover{border-color:var(--ac)}
+.pi.on{border-color:var(--ac);box-shadow:0 0 0 2px var(--ac2);background:#fbfdfc}
+.pi.dim{background:var(--line2);cursor:default}
+.pi.dim:hover{border-color:var(--line)}
+.pl{display:flex;gap:10px;align-items:center;min-width:0}
+.pno{flex:none;width:24px;height:24px;border-radius:6px;background:var(--line2);color:var(--ink2);font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.pi.on .pno{background:var(--ac);color:#fff}
+.pt2{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps2{font-size:10.5px;color:var(--ink3);overflow-wrap:anywhere}
+.pr{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.pv{display:flex;align-items:center;gap:6px;font-size:11px}
+.pk{color:var(--ink3);font-size:10px}
+.vb{font-size:11px;font-weight:700;padding:1px 9px;border-radius:5px;white-space:nowrap}
+.v-na{background:var(--line2);color:var(--ink3)}
+.pn{color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap;min-width:118px;text-align:right}
+@media (max-width:640px){
+  .pi{grid-template-columns:1fr}
+  .pr{align-items:flex-start;padding-left:34px}
+  .pn{min-width:0;text-align:left}
+}
+.dhead{margin:4px 0 10px}
+.dhead .dt2{font-size:18px;font-weight:700;line-height:1.3}
+.dhead .ds{font-size:11px;color:var(--ink3)}
+.readp{margin-bottom:14px}
+.ogrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0 14px}
+.ogrid .orow{border-top:1px solid var(--line2)}
+@media (max-width:900px){.ogrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.ogrid{grid-template-columns:1fr}}
+.readp .onote{border-top:0;padding:6px 0 0}
+@media (min-width:901px){.res-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;align-items:start}}
+.acts{flex-wrap:wrap}
+.btn{white-space:nowrap}
+.flow{flex-wrap:nowrap}
+.fs{min-width:0;margin-right:11px;padding:7px 8px}
+.fs .v{font-size:13px}
+@media (max-width:560px){.flow{flex-wrap:wrap;gap:8px 0}.fs{flex:1 1 40%}}
+@media print{
+  .drop,.ostat,#listPanel,.readp,.dhead{display:none !important}
+}
 </style>
 </head>
 <body>
@@ -214,159 +265,90 @@ input.miss,select.miss{background:var(--loS);border-color:var(--lo)}
 
 <div class="hdr">
   <div>
-    <h1>管理費・修繕積立金 適正額シミュレーター</h1>
-    <div class="sub">国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠</div>
-    <div class="acts">
+    <h1>管理費・修繕積立金 適正額チェッカー</h1>
+    <div class="sub">マイソクを読み込むだけで判定｜国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠</div>
+    <div class="acts" id="acts" style="display:none">
       <button class="btn primary" id="printBtn">A4横で印刷</button>
       <button class="btn" id="copyBtn">テキストでコピー</button>
+      <button class="btn" id="copyAllBtn">一覧をExcel用にコピー</button>
     </div>
   </div>
   <img class="logo" src="data:image/png;base64,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" alt="SIMPLE HOUSE">
 </div>
 
-<div class="grid">
-  <!-- 入力 -->
-  <div class="panel panel-input">
-    <p class="cap">マイソクから読み取る</p>
-    <label class="drop" id="drop">
-      <input type="file" id="fileIn" accept="application/pdf,image/*">
-      <div class="dt">マイソクPDF・画像をここにドロップ</div>
-      <div class="dd">またはタップして選択（PDF / JPG / PNG）<br>ファイルは外部に送信されず、この端末内で読み取ります</div>
-    </label>
-    <div class="ostat" id="ostat"><span id="ostatT">読み込み中…</span><div class="obar"><i id="obar"></i></div></div>
-    <div class="olist" id="olist"></div>
+<label class="drop" id="drop">
+  <input type="file" id="fileIn" accept="application/pdf,image/*" multiple>
+  <div class="dt">マイソクPDF・画像をここにドロップ</div>
+  <div class="dd">またはクリック／タップして選択　・　複数物件が連なったPDF（レインズの図面一括ダウンロード等）や複数ファイルにも対応<br>ファイルは外部に送信されず、この端末内で読み取ります</div>
+</label>
+<div class="ostat" id="ostat"><span id="ostatT">読み込み中…</span><div class="obar"><i id="obar"></i></div></div>
 
-    <div class="hr"></div>
-    <p class="cap">物件情報</p>
-    <div class="r2">
-      <div class="f"><label>築年（西暦）</label><input type="number" id="year" value="1999" min="1960" max="2030"></div>
-      <div class="f"><label>地上階数</label><input type="number" id="floors" value="10" min="2" max="60"></div>
-    </div>
-    <div class="f"><label>総戸数</label><input type="number" id="units" value="134" min="2" max="3000"></div>
-    <div class="r2">
-      <div class="f"><label>平均専有 ㎡</label><input type="number" id="avgArea" value="70" min="15" max="250" step="0.01"></div>
-      <div class="f"><label>対象住戸 ㎡</label><input type="number" id="myArea" value="70" min="15" max="250" step="0.01"></div>
-    </div>
-    <div class="f"><label>共用部込み係数</label>
-      <select id="coef">
-        <option value="0.80">0.80 外廊下・共用施設少</option>
-        <option value="0.78" selected>0.78 標準</option>
-        <option value="0.75">0.75 内廊下・施設充実</option>
-      </select></div>
-    <div class="f"><label>建築延床 ㎡（実数が分かれば）</label>
-      <input type="number" id="floorAreaDirect" placeholder="空欄＝推定" min="100"></div>
+<div class="panel" id="listPanel" style="display:none">
+  <p class="cap">読み取った物件　<span id="listSum" style="letter-spacing:0;font-weight:600;color:var(--ink2)"></span></p>
+  <div class="plist" id="plist"></div>
+</div>
 
-    <div class="hr"></div>
-    <p class="cap">機械式駐車場</p>
-    <div class="f"><label>機種</label>
-      <select id="mechType">
-        <option value="0">なし</option>
-        <option value="6450">2段昇降式（6,450円/台）</option>
-        <option value="5840">3段昇降式（5,840円/台）</option>
-        <option value="7210">3段昇降横行式（7,210円/台）</option>
-        <option value="6235">4段昇降横行式（6,235円/台）</option>
-        <option value="4645">垂直循環式（4,645円/台）</option>
-        <option value="5235">不明・その他（5,235円/台）</option>
-      </select></div>
-    <div class="f"><label>台数</label><input type="number" id="mechCount" value="0" min="0" max="1000"></div>
-    <label class="ck"><input type="checkbox" id="mechSeparate">駐車場会計を区分経理（加算しない）</label>
-
-    <div class="hr"></div>
-    <p class="cap">現況（任意）</p>
-    <div class="r2">
-      <div class="f"><label>修繕積立金 円/月</label><input type="number" id="curRepair" placeholder="12000" min="0" step="100"></div>
-      <div class="f"><label>管理費 円/月</label><input type="number" id="curMgmt" placeholder="11000" min="0" step="100"></div>
+<div id="detail" style="display:none">
+  <div class="print-head">
+    <div>
+      <div class="pt">管理費・修繕積立金 適正額試算<span id="printName"></span></div>
+      <div class="ps">国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠<span id="printDate"></span></div>
     </div>
-    <div class="f"><label>積立方式</label>
-      <select id="method">
-        <option value="unknown">不明</option>
-        <option value="flat">均等積立方式</option>
-        <option value="step">段階増額積立方式</option>
-      </select></div>
-
-    <div class="hr"></div>
-    <p class="cap">長期修繕計画（重要事項調査報告書）</p>
-    <div class="r2">
-      <div class="f"><label>残高A 万円</label><input type="number" id="lrA" placeholder="空欄＝0" min="0" step="100"></div>
-      <div class="f"><label>計画期間 年</label><input type="number" id="lrY" placeholder="30" min="5" max="60"></div>
-    </div>
-    <div class="f"><label>積立総額B 万円</label>
-      <input type="number" id="lrB" placeholder="空欄＝現況額×戸数×期間で推定" min="0" step="100"></div>
-    <div class="f"><label>繰入額C 万円（駐車場使用料等）</label>
-      <input type="number" id="lrC" placeholder="空欄＝0" min="0" step="100"></div>
+    <img class="logo" src="data:image/png;base64,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" alt="SIMPLE HOUSE">
   </div>
 
-  <!-- 結果 -->
-  <div>
-    <div class="print-head">
-      <div>
-        <div class="pt">管理費・修繕積立金 適正額試算<span id="printName"></span></div>
-        <div class="ps">国交省「修繕積立金ガイドライン」令和6年6月改訂／「令和5年度マンション総合調査」準拠<span id="printDate"></span></div>
+  <div class="dhead" id="dhead"></div>
+  <div class="panel readp" id="readp"></div>
+
+  <div class="cond" id="cond"></div>
+
+  <div class="res-grid">
+    <div>
+      <div class="hero">
+        <div class="lbl">修繕積立金の適正額（ガイドライン平均値）</div>
+        <div class="big" id="heroYen">—</div>
+        <div class="sub2" id="heroSub">—</div>
       </div>
-      <img class="logo" src="data:image/png;base64,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" alt="SIMPLE HOUSE">
-    </div>
-
-    <div class="cond" id="cond"></div>
-
-    <div class="res-grid">
-      <div>
-        <div class="hero">
-          <div class="lbl">修繕積立金の適正額（ガイドライン平均値）</div>
-          <div class="big" id="heroYen">—</div>
-          <div class="sub2" id="heroSub">—</div>
-        </div>
-
-        <div class="panel">
-          <p class="cap">修繕積立金 水準</p>
-          <div id="gauge1"></div>
-          <div class="verdict" id="verdict1"></div>
-          <div class="st3" id="gap3"></div>
-        </div>
-
-        <div class="panel sec">
-          <p class="cap">管理費 水準</p>
-          <div id="gauge2"></div>
-          <div class="verdict" id="verdict2"></div>
-        </div>
-
-        <div class="panel sec" id="zPanel" style="display:none">
-          <p class="cap">長期修繕計画による厳密判定（Z＝(A+B+C)÷X÷Y）</p>
-          <div id="zBody"></div>
-        </div>
+      <div class="panel">
+        <p class="cap">修繕積立金 水準</p>
+        <div id="gauge1"></div>
+        <div class="verdict" id="verdict1"></div>
+        <div class="st3" id="gap3"></div>
       </div>
-
-      <div>
-        <div class="panel">
-          <p class="cap">算定フロー</p>
-          <div class="flow" id="flow"></div>
-        </div>
-
-        <div class="panel sec">
-          <p class="cap">実勢との比較（修繕積立金・円/㎡・月）</p>
-          <div class="cbar" id="cbar"></div>
-        </div>
-
-        <div class="panel sec">
-          <p class="cap">同築年帯の積立方式（全国）</p>
-          <div class="stack" id="stack"></div>
-          <div class="lg"><span><i style="background:var(--ac)"></i>均等</span><span><i style="background:#d99a2b"></i>段階増額</span><span><i style="background:#c9c5bc"></i>その他・不明</span></div>
-        </div>
-
-        <div class="alerts" id="alerts"></div>
+      <div class="panel sec">
+        <p class="cap">管理費 水準</p>
+        <div id="gauge2"></div>
+        <div class="verdict" id="verdict2"></div>
       </div>
     </div>
-
-    <div class="print-foot">
-      出典：国土交通省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。<strong>管理費に国の㎡単価目安は存在せず</strong>、本表の管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値です。簡易試算のため、確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。／株式会社シンプルハウス
-    </div>
-
-    <div class="foot">
-      出典：国交省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。
-      目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。
-      <strong>管理費に国の㎡単価目安は存在しません</strong>（本ツールの管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値）。
-      確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。
+    <div>
+      <div class="panel">
+        <p class="cap">算定フロー</p>
+        <div class="flow" id="flow"></div>
+      </div>
+      <div class="panel sec">
+        <p class="cap">実勢との比較（修繕積立金・円/㎡・月）</p>
+        <div class="cbar" id="cbar"></div>
+      </div>
+      <div class="panel sec" id="stackPanel">
+        <p class="cap">同築年帯の積立方式（全国）</p>
+        <div class="stack" id="stack"></div>
+        <div class="lg"><span><i style="background:var(--ac)"></i>均等</span><span><i style="background:#d99a2b"></i>段階増額</span><span><i style="background:#c9c5bc"></i>その他・不明</span></div>
+      </div>
+      <div class="alerts" id="alerts"></div>
     </div>
   </div>
+
+  <div class="print-foot">
+    出典：国土交通省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。<strong>管理費に国の㎡単価目安は存在せず</strong>、本表の管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値です。数値はマイソクからの自動読み取りです。簡易試算のため、確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。／株式会社シンプルハウス
+  </div>
+</div>
+
+<div class="foot">
+  出典：国交省「マンションの修繕積立金に関するガイドライン」（令和6年6月改訂）、同「令和5年度マンション総合調査」。
+  目安は366事例からの参考値で、幅に収まらなくても直ちに不適切とは判断されません。
+  <strong>管理費に国の㎡単価目安は存在しません</strong>（本ツールの管理費目安は総合調査の戸当たり実績値に戸数規模の逆相関を当てた推計値）。
+  数値はマイソクからの自動読み取りで、OCRは誤読することがあります。確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。
 </div>
 </div>
 
@@ -378,6 +360,8 @@ const TIERS=[
  {label:'20階未満・2万㎡以上',avg:255,lo:190,hi:325},
  {label:'20階以上',avg:338,lo:240,hi:410}];
 const BOUNDS=[5000,10000,20000];
+const COEF=0.78;            // 専有合計→建築延床の換算係数（標準）
+const MECH_UNKNOWN=5235;    // 機械式駐車場 機種不明の1台あたり月額
 const tIdx=a=>a<5000?0:a<10000?1:a<20000?2:3;
 const mgR=u=>u<=30?[200,250]:u<=80?[170,220]:u<=150?[150,180]:u<=300?[130,160]:[120,155];
 function mk(y){
@@ -388,229 +372,8 @@ function mk(y){
  return{l:'2015年〜',r:12200,f:11.0,s:81.2,est:true};}
 const Y=n=>Math.round(n).toLocaleString('ja-JP');
 const N=n=>(Math.round(n*10)/10).toLocaleString('ja-JP');
-const MAN=n=>n>=10000?(Math.round(n/100)/100).toLocaleString('ja-JP')+'億円':Y(n)+'万円';
-const v=id=>{const x=parseFloat(document.getElementById(id).value);return isFinite(x)?x:0};
-const raw=id=>document.getElementById(id).value.trim();
-let txt='', propName='';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-
-/* ===== マイソク解析（テキスト→項目） ===== */
-const MysokuParser=(()=>{
- const ERA={'明治':1867,'大正':1911,'昭和':1925,'平成':1988,'令和':2018,M:1867,T:1911,S:1925,H:1988,R:2018};
- const NOW=new Date().getFullYear();
- function norm(s){
-   return String(s).normalize('NFKC')
-     .replace(/(\d)\s*[、､]\s*(?=\d{3}(?!\d))/g,'$1,')   // OCRの「10、000」
-     .replace(/(\d)\s*,\s*(?=\d{3}(?!\d))/g,'$1,')
-     .replace(/戶/g,'戸')                                   // ⼾(康熙部首)→戶→戸
-     .replace(/[〜~]/g,'〜');
- }
- const MONEY='(\\d+万(?:\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)?|\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)';
- function yen(s){
-   s=s.replace(/,/g,'');
-   let m=s.match(/^(\d+)万(?:(\d+)千|(\d+))?$/);
-   if(m)return +m[1]*10000+(m[2]?+m[2]*1000:0)+(m[3]?+m[3]:0);
-   m=s.match(/^(\d+)千$/);
-   return m? +m[1]*1000 : +s;
- }
- function firstValid(F,res,fn,ok){
-   for(const re of res){
-     const g=new RegExp(re.source,'g');let m;
-     while((m=g.exec(F))){const v=fn(m);if(v!=null&&ok(v))return {v,src:m[0]};}
-   }
-   return null;
- }
- function parseDate(seg){
-   const w=seg.match(/((?:19|20)\d{2})(?:年|[.\/-])(?:\([^)]{0,10}\))?\s*(\d{1,2})?/);
-   const e=seg.match(/(明治|大正|昭和|平成|令和|[MTSHR])\.?\s*(元|\d{1,2})(?:年|[.\/-])\s*(\d{1,2})?/);
-   const cand=[];
-   if(w)cand.push({i:w.index,y:+w[1],mo:w[2]?+w[2]:null});
-   if(e)cand.push({i:e.index,y:ERA[e[1]]+(e[2]==='元'?1:+e[2]),mo:e[3]?+e[3]:null});
-   cand.sort((a,b)=>a.i-b.i);
-   const c=cand.find(c=>c.y>=1950&&c.y<=NOW+3);
-   return c?{y:c.y,mo:(c.mo>=1&&c.mo<=12)?c.mo:null}:null;
- }
- function parse(text,fileName){
-   const T=norm(text), F=T.replace(/\s+/g,'').replace(/(\d)[、､,](?=\d{3}(?!\d))/g,'$1,')
-     .replace(/(\d)\.(?=\d{3}(?:[.,]\d{3})*円)/g,'$1,');      // OCRの「12.300円」
-   const r={};
-   // 築年月
-   let d=null;
-   const lab=/(建築年月|築年月|完成年月|竣工年月|新築年月|築年|竣工|完成)/g;let lm;
-   while(!d&&(lm=lab.exec(F)))d=parseDate(F.slice(lm.index+lm[0].length,lm.index+lm[0].length+28));
-   if(!d){const m=F.match(/((?:19|20)\d{2}年(?:\([^)]{0,10}\))?(?:\d{1,2}月)?|(?:昭和|平成|令和|[SHR])\.?(?:元|\d{1,2})[年.](?:\d{1,2}月?)?)(?:築|竣工|完成)/);
-     if(m)d=parseDate(m[1]);}
-   if(d)r.year={v:d.y,label:`${d.y}年${d.mo?d.mo+'月':''}`};
-   // 地上階数
-   const fl=firstValid(F,[/地上(?:階層|階数)?[:：]?(\d{1,2})階/,/(\d{1,2})階(?:地下\d{1,2}階)?建/,/(\d{1,2})階建/],m=>+m[1],v=>v>=2&&v<=70);
-   if(fl)r.floors={v:fl.v,label:`${fl.v}階`};
-   // 総戸数
-   const un=firstValid(F,[/総戸数[^\d]{0,6}?(\d{1,4})戸/,/総戸数[^\d]{0,6}?(\d{1,4})/,/総区画数?[^\d]{0,6}?(\d{1,4})/,/全(\d{1,4})戸/],m=>+m[1],v=>v>=2&&v<=3000);
-   if(un)r.units={v:un.v,label:`${un.v}戸`};
-   // 専有面積
-   let ar=firstValid(F,[/専有面積[^\d]{0,12}?(\d{2,3}(?:\.\d{1,3})?)/,/専有[^\d]{0,6}?(\d{2,3}\.\d{1,3})/],m=>+m[1],v=>v>=15&&v<=300);
-   if(!ar){const g=/(\d{2,3}\.\d{1,3})(?:m2|m²|平米|平方メートル)/g;let m;
-     while((m=g.exec(F))){const pre=F.slice(Math.max(0,m.index-14),m.index);
-       if(/バルコニー|ポーチ|ルーフ|テラス|アルコ|トランク|延床|敷地|土地|庭|物置|倉庫/.test(pre))continue;
-       const v=+m[1];if(v>=15&&v<=300){ar={v,src:m[0]};break;}}}
-   if(ar)r.area={v:ar.v,label:`${ar.v}㎡`};
-   // 管理費・修繕積立金（「管理費・修繕積立金 合計」を拾わないよう間に別ラベルを挟ませない）
-   const mg=firstValid(F,[new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'円'),new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'(?=/月|\\(月)')],m=>yen(m[1]),v=>v>=1000&&v<=150000);
-   if(mg)r.mgmt={v:mg.v,label:`${mg.v.toLocaleString('ja-JP')}円/月`};
-   const rp=firstValid(F,[new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'円'),new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'(?=/月|\\(月)'),new RegExp('修繕(?:積立)?費[^\\d管計基]{0,10}?'+MONEY+'円')],m=>/管理費等?[・･&と及\/]?$/.test(F.slice(Math.max(0,m.index-5),m.index))?null:yen(m[1]),v=>v>=500&&v<=200000);
-   if(rp)r.repair={v:rp.v,label:`${rp.v.toLocaleString('ja-JP')}円/月`};
-   // 建築延床面積
-   const fa=firstValid(F,[/延(?:べ)?床面積[^\d]{0,10}?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{3,6}(?:\.\d+)?)/],m=>+m[1].replace(/,/g,''),v=>v>=300&&v<=400000);
-   if(fa)r.floorArea={v:fa.v,label:`${fa.v.toLocaleString('ja-JP')}㎡`};
-   // 機械式駐車場
-   if(/機械式|立体駐車|タワーパーキング|昇降式|パズル式/.test(F))r.mech={v:true,label:'あり（記載あり）'};
-   // 物件名
-   const nm=T.match(/(?:物件名|建物名|マンション名)\s*[:：]?\s*([^\s■:：|｜]{2,40})/);
-   let name=nm?nm[1]:'';
-   if(!name&&fileName){name=fileName.replace(/\.[a-z0-9]+$/i,'').normalize('NFKC')
-     .replace(/\(\d+\)|マイソク|販売図面|販売資料|図面|物件資料|最新|[【】\[\]_]/g,' ').replace(/\s+/g,' ').trim();}
-   if(name)r.name={v:name,label:name,fromFile:!nm};
-   return r;
- }
- return {parse,norm};
-})();
-
-/* ===== PDF / 画像の読み込み ===== */
-const PDFJS='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
-const TESS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-const loaded={};
-function loadScript(src){
-  return loaded[src]||(loaded[src]=new Promise((ok,ng)=>{const s=document.createElement('script');
-    s.src=src;s.onload=ok;s.onerror=()=>{delete loaded[src];ng(new Error('ライブラリを読み込めませんでした（通信環境を確認してください）'));};
-    document.head.appendChild(s);}));
-}
-function stat(t,p){
-  const o=document.getElementById('ostat');o.classList.add('on');
-  document.getElementById('ostatT').textContent=t;
-  document.getElementById('obar').style.width=(p==null?0:Math.round(p*100))+'%';
-}
-async function pdfPages(file){
-  await loadScript(PDFJS+'pdf.min.js');
-  pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js';
-  const doc=await pdfjsLib.getDocument({data:await file.arrayBuffer(),cMapUrl:PDFJS+'cmaps/',cMapPacked:true,
-    standardFontDataUrl:PDFJS+'standard_fonts/'}).promise;
-  return doc;
-}
-async function pdfText(doc){
-  let out='';
-  for(let i=1;i<=Math.min(doc.numPages,4);i++){
-    const tc=await (await doc.getPage(i)).getTextContent();
-    out+=tc.items.map(it=>it.str+(it.hasEOL?'\n':'')).join('')+'\n';
-  }
-  return out;
-}
-async function pdfCanvases(doc){
-  const cs=[];
-  for(let i=1;i<=Math.min(doc.numPages,2);i++){
-    const pg=await doc.getPage(i), vp0=pg.getViewport({scale:1});
-    const sc=Math.min(4,2600/Math.max(vp0.width,vp0.height)), vp=pg.getViewport({scale:sc});
-    const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
-    const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
-    await pg.render({canvasContext:ctx,viewport:vp}).promise;cs.push(c);
-  }
-  return cs;
-}
-async function ocr(images){
-  await loadScript(TESS);
-  stat('OCR準備中（初回は日本語データを取得するため少し時間がかかります）',0.02);
-  const n=images.length;let k=0;
-  const w=await Tesseract.createWorker('jpn',1,{logger:m=>{
-    if(m.status==='recognizing text')stat(`文字を読み取り中（OCR）${n>1?` ${k+1}/${n}ページ`:''}`,(k+m.progress)/n);}});
-  let out='';
-  try{for(k=0;k<n;k++){const {data}=await w.recognize(images[k]);out+=data.text+'\n';}}
-  finally{await w.terminate();}
-  return out;
-}
-const CORE=['year','floors','units','area','mgmt','repair'];
-async function readMysoku(file){
-  let text='',mode='',r={};
-  if(file.type==='application/pdf'||/\.pdf$/i.test(file.name)){
-    stat('PDFを開いています…',0.05);
-    const doc=await pdfPages(file);
-    text=await pdfText(doc);
-    r=MysokuParser.parse(text,file.name);mode='PDFテキスト';
-    const hit=CORE.filter(k=>r[k]).length;
-    if(hit<CORE.length){                       // 画像だけのPDF、または一部が画像
-      stat('画像として読み取ります…',0.05);
-      const t2=await ocr(await pdfCanvases(doc));
-      const r2=MysokuParser.parse(t2,file.name);
-      for(const k in r2)if(!r[k]||(k==='name'&&r[k].fromFile&&!r2[k].fromFile)){r[k]=r2[k];r[k].ocr=true;}
-      mode=hit?'PDFテキスト＋OCR':'OCR（画像PDF）';text+='\n'+t2;
-    }
-  }else if(/^image\//.test(file.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(file.name)){
-    const url=URL.createObjectURL(file);
-    try{const img=await new Promise((ok,ng)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ng(new Error('画像を開けませんでした'));i.src=url;});
-      const sc=Math.min(3,Math.max(1,2600/Math.max(img.width,img.height)));
-      const c=document.createElement('canvas');c.width=img.width*sc;c.height=img.height*sc;
-      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);
-      text=await ocr([c]);}
-    finally{URL.revokeObjectURL(url);}
-    r=MysokuParser.parse(text,file.name);for(const k in r)r[k].ocr=true;mode='OCR（画像）';
-  }else throw new Error('PDFまたは画像ファイルを選んでください');
-  return {r,mode,text};
-}
-
-const FIELD_IDS=['year','floors','units','avgArea','myArea','floorAreaDirect','curRepair','curMgmt','mechCount','mechType','lrA','lrY','lrB','lrC'];
-function setF(id,val,cls){const e=document.getElementById(id);e.value=val;e.classList.remove('auto','miss');if(cls)e.classList.add(cls);}
-function applyMysoku({r,mode},fileName){
-  // 前の物件の値を残さない
-  FIELD_IDS.forEach(id=>setF(id,''));
-  setF('mechType','0');setF('mechCount','0');
-  document.getElementById('mechSeparate').checked=false;
-  document.getElementById('method').value='unknown';
-  const put=(k,id)=>{if(r[k])setF(id,r[k].v,'auto');else setF(id,'','miss');};
-  put('year','year');put('floors','floors');put('units','units');put('area','myArea');
-  if(r.area)setF('avgArea',r.area.v,'auto');else setF('avgArea','','miss');
-  if(r.mgmt)setF('curMgmt',r.mgmt.v,'auto');
-  if(r.repair)setF('curRepair',r.repair.v,'auto');
-  if(r.floorArea)setF('floorAreaDirect',r.floorArea.v,'auto');
-  if(r.mech){setF('mechType','5235','auto');setF('mechCount','0','miss');}
-  propName=r.name?r.name.v:'';
-  document.getElementById('printName').textContent=propName?'　'+propName:'';
-
-  const row=(k,lab,item,ngText,estText)=>{
-    const tag=item?(estText?`<span class="otag est">${estText}</span>`:`<span class="otag ok">${item.ocr?'OCR':'読取'}</span>`)
-                   :`<span class="otag ${ngText==='推定で計算'||ngText==='記載なし'?'est':'ng'}">${ngText}</span>`;
-    return `<div class="orow"><span class="k">${lab}</span><span class="val">${item?esc(item.label):'—'}</span>${tag}</div>`;};
-  const got=CORE.filter(k=>r[k]).length, anyOcr=Object.values(r).some(x=>x&&x.ocr);
-  const miss=[['year','築年'],['floors','地上階数'],['units','総戸数'],['area','専有面積']].filter(x=>!r[x[0]]).map(x=>x[1]);
-  let notes=[];
-  if(miss.length)notes.push(`<b style="color:var(--lo)">${miss.join('・')}</b>が読み取れませんでした。赤枠の欄に入力してください。`);
-  if(r.area)notes.push('平均専有㎡は<b>この住戸と同じ値で仮置き</b>しています（マイソクには載らないため）。分かれば修正してください。');
-  if(r.mech)notes.push('機械式駐車場の記載があります。<b>台数</b>と区分経理の有無を確認してください。');
-  if(anyOcr)notes.push('OCRは誤読することがあります。<b>黄色の欄の数値がマイソクと一致しているか</b>必ず確認してください。');
-  document.getElementById('olist').innerHTML=
-    `<div class="oh"><b>${got}/${CORE.length}項目</b>を自動入力（${mode}）<br><span style="font-weight:500">${esc(fileName)}</span></div>`+
-    row('name','物件名',r.name,'—',r.name&&r.name.fromFile?'ファイル名':'')+
-    row('year','築年月',r.year,'未検出')+
-    row('floors','地上階数',r.floors,'未検出')+
-    row('units','総戸数',r.units,'未検出')+
-    row('area','専有面積',r.area,'未検出')+
-    row('mgmt','管理費',r.mgmt,'未検出')+
-    row('repair','修繕積立金',r.repair,'未検出')+
-    row('floorArea','建築延床',r.floorArea,'推定で計算')+
-    row('mech','機械式駐車',r.mech,'記載なし')+
-    (notes.length?`<div class="onote">${notes.join('<br>')}</div>`:'');
-  document.getElementById('olist').classList.add('on');
-  calc();
-}
-async function handleFile(file){
-  if(!file)return;
-  const drop=document.getElementById('drop');drop.style.pointerEvents='none';drop.style.opacity='.6';
-  try{
-    const res=await readMysoku(file);
-    window.__lastMysoku=res;                 // 検証用
-    applyMysoku(res,file.name);
-    stat('読み取り完了',1);setTimeout(()=>document.getElementById('ostat').classList.remove('on'),1200);
-  }catch(e){
-    console.error(e);stat('読み取りに失敗しました：'+(e.message||e),0);
-  }finally{drop.style.pointerEvents='';drop.style.opacity='';document.getElementById('fileIn').value='';}
-}
+const $=id=>document.getElementById(id);
 
 function gauge(lo,avg,hi,cur,unit,pinLab,loLab){
   const max=Math.max(hi*1.18, cur?cur*1.12:0);
@@ -639,207 +402,414 @@ function gauge(lo,avg,hi,cur,unit,pinLab,loLab){
   </div>`;
 }
 
-function calc(){
- const year=v('year'),units=v('units'),floors=v('floors'),avgA=v('avgArea');
- const myA=v('myArea')||avgA, coef=parseFloat(document.getElementById('coef').value);
- const dir=raw('floorAreaDirect');
- const mRate=parseFloat(document.getElementById('mechType').value)||0, mCnt=v('mechCount');
- const mSep=document.getElementById('mechSeparate').checked;
- const cR=raw('curRepair')?v('curRepair'):null, cM=raw('curMgmt')?v('curMgmt'):null;
- const method=document.getElementById('method').value;
- const need=[['year','築年',year>=1950],['floors','地上階数',floors>=1],['units','総戸数',units>=2],['avgArea','平均専有㎡',avgA>0]]
-   .filter(x=>!x[2]).map(x=>x[1]);
- const hero=document.querySelector('.hero');
- if(need.length){
-   hero.classList.add('empty');
-   document.getElementById('heroYen').textContent='入力待ち';
-   document.getElementById('heroSub').textContent=`未入力：${need.join('・')}（赤枠の欄を入力すると判定します）`;
-   ['gauge1','verdict1','gap3','gauge2','verdict2','flow','cbar','stack','alerts','cond'].forEach(id=>document.getElementById(id).innerHTML='');
-   document.getElementById('zPanel').style.display='none';
-   txt='';return;
- }
- hero.classList.remove('empty');
-
- const tot=units*avgA, isDir=dir!==''&&parseFloat(dir)>0;
- const fa=isDir?parseFloat(dir):tot/coef, tower=floors>=20;
- const ti=tower?4:tIdx(fa), T=TIERS[ti];
- const addOn=(!mSep&&mRate>0&&mCnt>0), add=addOn?mRate*mCnt/tot:0;
- const avg=T.avg+add, lo=T.lo+add, hi=T.hi+add;
- const [gL,gH]=mgR(units);
- const M=mk(year);
-
- // 条件チップ
- const mt=(mRate>0&&mCnt>0)?`${Y(mCnt)}台${mSep?'･区分経理':''}`:'なし';
- document.getElementById('cond').innerHTML=
-  (propName?`<span class="chip">物件<b>${esc(propName)}</b></span>`:'')+
-  `<span class="chip">築年<b>${year}年</b></span>`+
-  `<span class="chip">総戸数<b>${Y(units)}戸</b></span>`+
-  `<span class="chip">地上<b>${Y(floors)}階</b></span>`+
-  `<span class="chip">平均専有<b>${N(avgA)}㎡</b></span>`+
-  `<span class="chip">対象住戸<b>${N(myA)}㎡</b></span>`+
-  `<span class="chip">建築延床<b>${Y(fa)}㎡</b></span>`+
-  `<span class="chip">機械式<b>${mt}</b></span>`+
-  `<span class="chip">積立方式<b>${{unknown:'不明',flat:'均等',step:'段階増額'}[method]}</b></span>`;
-
- // ヒーロー
- document.getElementById('heroYen').innerHTML=`月 ${Y(avg*myA)} 円<em>${N(avg)} 円/㎡</em>`;
- document.getElementById('heroSub').textContent=
-   `適正レンジ 月 ${Y(lo*myA)}〜${Y(hi*myA)} 円　／　専有 ${N(myA)}㎡`;
-
- // ゲージ1
- document.getElementById('gauge1').innerHTML=
-   gauge(lo,avg,hi,cR?cR/myA:null,'円/㎡・月　ガイドライン目安');
-
- // 判定
- let vh='';
- if(cR){
-   const cu=cR/myA;
-   let cls,lab,msg;
-   if(cu>=avg){cls='v-ok';lab='十分';msg='ガイドライン平均値以上';}
-   else if(cu>=lo){cls='v-ok';lab='適正圏';msg='レンジ内・余裕は薄い';}
-   else if(cu>=lo*0.6){cls='v-mid';lab='不足の可能性';msg='値上げ・一時金リスクあり';}
-   else{cls='v-lo';lab='要警戒';msg='合意形成が難航しやすい水準';}
-   vh=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cR)}円＝${N(cu)}円/㎡・${msg}</span>`;
-   const gap=Math.max(0,avg-cu)*myA;
-   document.getElementById('gap3').innerHTML= gap>0?
-     `<div class="st"><div class="t">平均まで不足／月</div><div class="v">${Y(gap)}円</div></div>
-      <div class="st"><div class="t">同／年</div><div class="v">${Y(gap*12)}円</div></div>
-      <div class="st"><div class="t">同／10年</div><div class="v">${Y(gap*120)}円</div></div>`
-     :`<div class="st" style="grid-column:1/-1;background:var(--okS)"><div class="t" style="color:var(--ok)">平均値を満たしています</div><div class="v" style="color:var(--ok)">不足なし</div></div>`;
- }else{
-   vh=`<span class="vnote">現況の修繕積立金を入力すると判定します</span>`;
-   document.getElementById('gap3').innerHTML='';
- }
- document.getElementById('verdict1').innerHTML=vh;
-
- // ゲージ2（管理費）
- document.getElementById('gauge2').innerHTML=
-   gauge(gL,(gL+gH)/2,gH,cM?cM/myA:null,'円/㎡・月　推計レンジ（国の目安なし）','現況','レンジ未満');
- let v2=`<span class="vnote">目安 月 ${Y(gL*myA)}〜${Y(gH*myA)} 円（${gL}〜${gH}円/㎡）</span>`;
- if(cM){
-   const cu=cM/myA;
-   let cls,lab,note;
-   if(cu>gH){cls='v-mid';lab='レンジ超';note='共用施設の充実度で正当に上振れます';}
-   else if(cu<gL*0.7){cls='v-lo';lab='著しく低い';note='管理水準そのものの確認が必要です';}
-   else if(cu<gL){cls='v-mid';lab='レンジ未満';note='安い＝良いとは限りません';}
-   else{cls='v-ok';lab='レンジ内';note='';}
-   v2=`<span class="vbadge ${cls}">${lab}</span><span class="vnote">現況 月${Y(cM)}円＝${N(cu)}円/㎡　目安 ${gL}〜${gH}円/㎡${note?'・'+note:''}</span>`;
- }
- document.getElementById('verdict2').innerHTML=v2;
-
- // フロー
- document.getElementById('flow').innerHTML=
-  `<div class="fs"><div class="t">専有合計</div><div class="v">${Y(tot)}㎡</div></div>
-   <div class="fs"><div class="t">建築延床${isDir?'':'（÷'+coef+'）'}</div><div class="v">${Y(fa)}㎡</div></div>
-   <div class="fs"><div class="t">適用区分</div><div class="v" style="font-size:12px">${T.label}</div></div>
-   <div class="fs"><div class="t">㎡単価${add?'（＋機械式'+N(add)+'）':''}</div><div class="v">${N(avg)}円</div></div>
-   <div class="fs"><div class="t">月額（${N(myA)}㎡）</div><div class="v">${Y(avg*myA)}円</div></div>`;
-
- // 実勢比較バー
- const mkU=M.r/70;
- const rows=[
-  {n:'本物件のガイドライン目安',x:avg,c:'var(--ac)'},
-  {n:`実勢 ${M.l}完成${M.est?'※':''}`,x:mkU,c:'#d99a2b'},
-  {n:'実勢 全国平均（全築年）',x:13054/70,c:'#c9c5bc'}];
- if(cR)rows.unshift({n:'この物件の現況',x:cR/myA,c:'#1b1b19'});
- const mx=Math.max(...rows.map(r=>r.x))*1.1;
- document.getElementById('cbar').innerHTML=rows.map(r=>
-  `<div class="row"><div class="nm">${r.n}</div>
-   <div class="tk"><div class="fl" style="width:${r.x/mx*100}%;background:${r.c}"></div></div>
-   <div class="vl">${N(r.x)} 円/㎡</div></div>`).join('');
-
- // 積立方式
- const other=Math.max(0,100-M.f-M.s);
- document.getElementById('stack').innerHTML=
-  `<div style="width:${M.f}%;background:var(--ac)">${M.f}%</div>
-   <div style="width:${M.s}%;background:#d99a2b">${M.s}%</div>
-   <div style="width:${other}%;background:#c9c5bc">${other.toFixed(1)}%</div>`;
-
- // 長期修繕計画によるZ（厳密判定）
- const zY=v('lrY'), zA=raw('lrA')?v('lrA'):0, zC=raw('lrC')?v('lrC'):0;
- const zBraw=raw('lrB')?v('lrB'):null;
- const zP=document.getElementById('zPanel');
- let zWarn=[], zTxt='';
- if(zY>0&&(zBraw!==null||cR)){
-   const months=zY*12, bEst=(zBraw===null);
-   const B=bEst? cR*units*months/10000 : zBraw;
-   const total=(zA+B+zC)*10000, Z=total/tot/months;
-   const dep=total>0? zC*10000/total*100 : 0;
-   let zc,zl;
-   if(Z>=avg){zc='v-ok';zl='十分';}
-   else if(Z>=lo){zc='v-ok';zl='適正圏';}
-   else if(Z>=lo*0.6){zc='v-mid';zl='不足の可能性';}
-   else{zc='v-lo';zl='要警戒';}
-   document.getElementById('zBody').innerHTML=
-    `<div class="zgrid">
-       <div class="zc"><div class="t">残高 A</div><div class="v">${MAN(zA)}</div></div>
-       <div class="zc"><div class="t">積立総額 B${bEst?'（推定）':''}</div><div class="v">${MAN(B)}</div></div>
-       <div class="zc"><div class="t">繰入額 C</div><div class="v">${MAN(zC)}</div></div>
-       <div class="zc"><div class="t">期間Y ／ 総専有X</div><div class="v">${Y(zY)}年／${Y(tot)}㎡</div></div>
-     </div>`
-    + gauge(lo,avg,hi,Z,'円/㎡・月　Z＝計画期間全体の平均額','Z')
-    + `<div class="verdict"><span class="vbadge ${zc}">${zl}</span><span class="vnote">Z＝${N(Z)}円/㎡・月（対象住戸 月${Y(Z*myA)}円相当）／目安 平均${N(avg)}円・幅${N(lo)}〜${N(hi)}円</span></div>`
-    + `<div class="zdep"><div class="zt"><span>繰入依存度　C÷(A＋B＋C)</span><span><b>${N(dep)}%</b></span></div>
-       <div class="zbar"><i style="width:${Math.min(100,dep)}%"></i></div></div>`;
-   zP.style.display='';
-   if(bEst)zWarn.push(['w','積立総額Bは<b>現況額が計画期間中ずっと続く前提</b>の推定値です（均等積立方式相当）。段階増額方式では過小評価になります。長期修繕計画のBを入力してください。']);
-   if(dep>=35)zWarn.push(['w',`計画の<b>${N(dep)}%を駐車場使用料等の繰入（C）に依存</b>しています。ガイドラインは「実際に集められている金額を上回る繰入額を見込むことは避けるべき」「駐車場使用料は稼働率で大きく変動する」と明示しています。築古は高齢化・車離れで稼働率が落ちやすく、<b>繰入が減れば即座に不足へ直結します。駐車場稼働率を必ず確認</b>してください。`]);
-   else if(dep>=20)zWarn.push(['i',`計画の${N(dep)}%を駐車場使用料等の繰入（C）で賄う計画です（ガイドラインのモデルケースも約21%で、この水準自体は一般的）。ただし稼働率が落ちると不足に直結するため、駐車場稼働率は確認してください。`]);
-   zTxt=`■Z（計画期間全体の平均額）：${N(Z)}円/㎡・月 → ${zl}\n　A${MAN(zA)} ＋ B${MAN(B)}${bEst?'(推定)':''} ＋ C${MAN(zC)} ÷ X${Y(tot)}㎡ ÷ Y${Y(zY)}年　繰入依存度${N(dep)}%\n`;
- }else{zP.style.display='none';}
-
- // 警告（短く）
- let al=[...zWarn];
- if(!tower){let nb=null;BOUNDS.forEach((b,i)=>{if(Math.abs(fa-b)/b<=0.15)nb={b,i}});
-  if(nb){const o=TIERS[fa<nb.b?nb.i+1:nb.i];
-   if(o&&o.label!==T.label)al.push(['w',`区分境界（${Y(nb.b)}㎡）付近。隣接区分なら ${N(o.avg+add)}円/㎡。<b>${N(Math.min(avg,o.avg+add))}〜${N(Math.max(avg,o.avg+add))}円/㎡</b> の幅で見てください。`]);}}
- if(floors>=18&&floors<=22)al.push(['w','20階の境界付近。20階以上は目安が大きく上がるため階数の実数確認が必要です。']);
- if(cR&&(method==='step'||(method==='unknown'&&year>=2005)))
-  al.push(['w',`判定は暫定。目安は<b>計画期間全体の平均額</b>で今月の徴収額ではありません。同築年帯は段階増額が${M.s}%で、現況が低いのは設計どおりの可能性があります。`]);
- if(cR&&method==='flat')al.push(['i','均等積立方式のため現況＝計画平均とみなして比較。確度は高めです。']);
- if(cR&&cR/myA<lo)al.push(['w','下限値は長寿命化促進税制の引上げ基準線。下回る場合は増額決議・一時金の可能性を織り込んでください。']);
- if(cR&&cR/myA<lo&&year<=2004)
-  al.push([year<=1994?'l':'w',`<b>築古×下限未満</b>：${M.l}完成の全国比率は均等${M.f}%／段階増額${M.s}%。段階増額でも${year<=1994?'すでに最終段階に達しているはず':'最終段階に近いはず'}で、<b>「今後上がる予定だから今は安い」では説明できません</b>。工事費高騰が古い計画に未反映でないか、給排水管・EVの更新が目前でないかを長期修繕計画で確認してください。`]);
- if(mRate>0&&mCnt>0&&mSep)al.push(['i','機械式は区分経理のため加算していません。']);
- if(cM){const cmu=cM/myA;
-  if(cmu<gL)al.push(['w',`管理費が推計レンジ（${gL}〜${gH}円/㎡）を下回ります。<b>安い管理費は管理水準低下のサイン</b>のことがあります。管理員の勤務形態・清掃回数・設備点検頻度・委託契約の内容を確認してください。駐車場使用料からの充当で見かけ上安くなっている場合もあります（全国平均は充当を除くと11,503円、含むと17,103円）。`]);
-  else al.push(['i','管理費の超過＝割高ではありません。共用施設の充実度で正当に上振れます。']);}
- document.getElementById('alerts').innerHTML=al.map(a=>`<div class="al al-${a[0]}">${a[1]}</div>`).join('');
-
- txt=`【管理費・修繕積立金 適正額試算】${propName?'\n物件：'+propName:''}
-築${year}年／${Y(units)}戸／地上${Y(floors)}階／平均専有${N(avgA)}㎡／対象${N(myA)}㎡
-専有合計${Y(tot)}㎡ → 建築延床${Y(fa)}㎡${isDir?'(入力値)':'(推定÷'+coef+')'} → ${T.label}
-■修繕積立金 適正額：平均 ${N(avg)}円/㎡・月 ＝ 月${Y(avg*myA)}円
-　適正レンジ ${N(lo)}〜${N(hi)}円/㎡ ＝ 月${Y(lo*myA)}〜${Y(hi*myA)}円${add?`（機械式加算 +${N(add)}円/㎡含む）`:''}
-${cR?`　現況 ${N(cR/myA)}円/㎡（月${Y(cR)}円）／平均まで月${Y(Math.max(0,avg-cR/myA)*myA)}円・年${Y(Math.max(0,avg-cR/myA)*myA*12)}円不足\n`:''}■管理費 目安（推計・国の目安なし）：${gL}〜${gH}円/㎡ ＝ 月${Y(gL*myA)}〜${Y(gH*myA)}円
-${cM?`　現況 ${N(cM/myA)}円/㎡（月${Y(cM)}円）\n`:''}${zTxt}■実勢：${M.l}完成 月${Y(M.r)}円/戸（約${N(mkU)}円/㎡）${M.est?'※推計':''}／全国平均 月13,054円/戸
-※簡易試算。確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。`;
+/* ===== 判定（数値のみ） ===== */
+function core(P){
+  if(!(P.units>=2&&P.area>0))return null;
+  const units=P.units, myA=P.area, avgA=P.area;        // マイソクに平均専有は載らないため対象住戸で代用
+  const tot=units*avgA, isDir=!!P.floorArea;
+  const fa=isDir?P.floorArea:tot/COEF, tower=!!P.floors&&P.floors>=20;
+  const T=TIERS[tower?4:tIdx(fa)];
+  const avg=T.avg, lo=T.lo, hi=T.hi;
+  const [gL,gH]=mgR(units);
+  const cR=P.repair||null, cM=P.mgmt||null;
+  let rv=null, mv=null;
+  if(cR){const u=cR/myA;
+    rv=u>=avg?{cls:'v-ok',lab:'十分',msg:'ガイドライン平均値以上'}
+      :u>=lo?{cls:'v-ok',lab:'適正圏',msg:'レンジ内・余裕は薄い'}
+      :u>=lo*0.6?{cls:'v-mid',lab:'不足の可能性',msg:'値上げ・一時金リスクあり'}
+      :{cls:'v-lo',lab:'要警戒',msg:'合意形成が難航しやすい水準'};
+    rv.u=u;}
+  if(cM){const u=cM/myA;
+    mv=u>gH?{cls:'v-mid',lab:'レンジ超',note:'共用施設の充実度で正当に上振れます'}
+      :u<gL*0.7?{cls:'v-lo',lab:'著しく低い',note:'管理水準そのものの確認が必要です'}
+      :u<gL?{cls:'v-mid',lab:'レンジ未満',note:'安い＝良いとは限りません'}
+      :{cls:'v-ok',lab:'レンジ内',note:''};
+    mv.u=u;}
+  return {units,myA,avgA,tot,isDir,fa,tower,T,avg,lo,hi,gL,gH,cR,cM,rv,mv};
 }
 
-document.querySelectorAll('input:not([type=file]),select').forEach(e=>{
-  e.addEventListener('input',()=>{e.classList.remove('auto','miss');calc();});
-  e.addEventListener('change',calc);});
-(()=>{const d=document.getElementById('drop'),fi=document.getElementById('fileIn');
-  fi.addEventListener('change',()=>handleFile(fi.files[0]));
+/* ===== 詳細表示 ===== */
+let txt='';
+function render(P){
+  const C=core(P), year=P.year||null, M=year?mk(year):null, myA=P.area;
+  $('printName').textContent=P.title?'　'+P.title:'';
+  $('dhead').innerHTML=`<div class="dt2">${esc(P.title)}</div><div class="ds">${esc(P.src)}${P.addr&&P.addr!==P.title?'　'+esc(P.addr):''}</div>`;
+  $('readp').innerHTML=readGrid(P);
+  const parts=['gauge1','verdict1','gap3','gauge2','verdict2','flow','cbar','stack','alerts','cond'];
+  if(!C){
+    parts.forEach(id=>$(id).innerHTML='');
+    document.querySelector('.res-grid').style.display='none';
+    txt='';return;
+  }
+  document.querySelector('.res-grid').style.display='';
+  const {tot,isDir,fa,tower,T,avg,lo,hi,gL,gH,cR,cM,rv,mv,units}=C;
+
+  $('cond').innerHTML=
+   `<span class="chip">築年<b>${year?year+'年':'不明'}</b></span>`+
+   `<span class="chip">総戸数<b>${Y(units)}戸</b></span>`+
+   `<span class="chip">地上<b>${P.floors?Y(P.floors)+'階':'不明'}</b></span>`+
+   `<span class="chip">専有<b>${N(myA)}㎡</b></span>`+
+   `<span class="chip">建築延床<b>${Y(fa)}㎡${isDir?'':'（推定）'}</b></span>`+
+   `<span class="chip">機械式<b>${P.mech?'記載あり・台数不明':'記載なし'}</b></span>`;
+
+  $('heroYen').innerHTML=`月 ${Y(avg*myA)} 円<em>${N(avg)} 円/㎡</em>`;
+  $('heroSub').textContent=`適正レンジ 月 ${Y(lo*myA)}〜${Y(hi*myA)} 円　／　専有 ${N(myA)}㎡`;
+
+  $('gauge1').innerHTML=gauge(lo,avg,hi,cR?cR/myA:null,'円/㎡・月　ガイドライン目安');
+  if(rv){
+    $('verdict1').innerHTML=`<span class="vbadge ${rv.cls}">${rv.lab}</span><span class="vnote">現況 月${Y(cR)}円＝${N(rv.u)}円/㎡・${rv.msg}</span>`;
+    const gap=Math.max(0,avg-rv.u)*myA;
+    $('gap3').innerHTML=gap>0?
+      `<div class="st"><div class="t">平均まで不足／月</div><div class="v">${Y(gap)}円</div></div>
+       <div class="st"><div class="t">同／年</div><div class="v">${Y(gap*12)}円</div></div>
+       <div class="st"><div class="t">同／10年</div><div class="v">${Y(gap*120)}円</div></div>`
+      :`<div class="st" style="grid-column:1/-1;background:var(--okS)"><div class="t" style="color:var(--ok)">平均値を満たしています</div><div class="v" style="color:var(--ok)">不足なし</div></div>`;
+  }else{
+    $('verdict1').innerHTML=`<span class="vnote">マイソクから修繕積立金を読み取れなかったため、適正額のみ表示しています</span>`;
+    $('gap3').innerHTML='';
+  }
+
+  $('gauge2').innerHTML=gauge(gL,(gL+gH)/2,gH,cM?cM/myA:null,'円/㎡・月　推計レンジ（国の目安なし）','現況','レンジ未満');
+  $('verdict2').innerHTML=mv
+    ?`<span class="vbadge ${mv.cls}">${mv.lab}</span><span class="vnote">現況 月${Y(cM)}円＝${N(mv.u)}円/㎡　目安 ${gL}〜${gH}円/㎡${mv.note?'・'+mv.note:''}</span>`
+    :`<span class="vnote">目安 月 ${Y(gL*myA)}〜${Y(gH*myA)} 円（${gL}〜${gH}円/㎡）・管理費は読み取れませんでした</span>`;
+
+  $('flow').innerHTML=
+   `<div class="fs"><div class="t">専有合計（${N(myA)}㎡×${Y(units)}戸）</div><div class="v">${Y(tot)}㎡</div></div>
+    <div class="fs"><div class="t">建築延床${isDir?'':'（÷'+COEF+'）'}</div><div class="v">${Y(fa)}㎡</div></div>
+    <div class="fs"><div class="t">適用区分</div><div class="v" style="font-size:12px">${T.label}</div></div>
+    <div class="fs"><div class="t">㎡単価</div><div class="v">${N(avg)}円</div></div>
+    <div class="fs"><div class="t">月額（${N(myA)}㎡）</div><div class="v">${Y(avg*myA)}円</div></div>`;
+
+  const rows=[{n:'本物件のガイドライン目安',x:avg,c:'var(--ac)'}];
+  if(M)rows.push({n:`実勢 ${M.l}完成${M.est?'※':''}`,x:M.r/70,c:'#d99a2b'});
+  rows.push({n:'実勢 全国平均（全築年）',x:13054/70,c:'#c9c5bc'});
+  if(cR)rows.unshift({n:'この物件の現況',x:cR/myA,c:'#1b1b19'});
+  const mx=Math.max(...rows.map(r=>r.x))*1.1;
+  $('cbar').innerHTML=rows.map(r=>
+   `<div class="row"><div class="nm">${r.n}</div>
+    <div class="tk"><div class="fl" style="width:${r.x/mx*100}%;background:${r.c}"></div></div>
+    <div class="vl">${N(r.x)} 円/㎡</div></div>`).join('');
+
+  $('stackPanel').style.display=M?'':'none';
+  if(M){const other=Math.max(0,100-M.f-M.s);
+    $('stack').innerHTML=
+     `<div style="width:${M.f}%;background:var(--ac)">${M.f}%</div>
+      <div style="width:${M.s}%;background:#d99a2b">${M.s}%</div>
+      <div style="width:${other}%;background:#c9c5bc">${other.toFixed(1)}%</div>`;}
+
+  // 警告
+  const al=[];
+  if(!tower){let nb=null;BOUNDS.forEach((b,i)=>{if(Math.abs(fa-b)/b<=0.15)nb={b,i}});
+   if(nb){const o=TIERS[fa<nb.b?nb.i+1:nb.i];
+    if(o&&o.label!==T.label)al.push(['w',`区分境界（${Y(nb.b)}㎡）付近。隣接区分なら ${N(o.avg)}円/㎡。<b>${N(Math.min(avg,o.avg))}〜${N(Math.max(avg,o.avg))}円/㎡</b> の幅で見てください。`]);}}
+  if(!P.floors)al.push(['w','地上階数が読み取れなかったため<b>20階未満として算定</b>しています。20階以上なら目安が大きく上がります。']);
+  else if(P.floors>=18&&P.floors<=22)al.push(['w','20階の境界付近。20階以上は目安が大きく上がるため階数の実数確認が必要です。']);
+  if(!isDir)al.push(['i',`建築延床はマイソクに記載がないため、<b>専有面積×総戸数÷${COEF}</b>で推定しています（全住戸が同じ広さと仮定）。`]);
+  if(P.mech)al.push(['w',`機械式駐車場の記載があります。台数が分からないため<b>目安に加算していません</b>。機械式がある物件は目安が上がり（機種不明で1台あたり月${Y(MECH_UNKNOWN)}円÷総専有面積）、修繕積立金の不足はより大きい可能性があります。`]);
+  if(cR&&year&&year>=2005)
+   al.push(['w',`判定は暫定。目安は<b>計画期間全体の平均額</b>で今月の徴収額ではありません。同築年帯は段階増額が${M.s}%で、現況が低いのは設計どおりの可能性があります。`]);
+  if(cR&&cR/myA<lo)al.push(['w','下限値は長寿命化促進税制の引上げ基準線。下回る場合は増額決議・一時金の可能性を織り込んでください。']);
+  if(cR&&cR/myA<lo&&year&&year<=2004)
+   al.push([year<=1994?'l':'w',`<b>築古×下限未満</b>：${M.l}完成の全国比率は均等${M.f}%／段階増額${M.s}%。段階増額でも${year<=1994?'すでに最終段階に達しているはず':'最終段階に近いはず'}で、<b>「今後上がる予定だから今は安い」では説明できません</b>。工事費高騰が古い計画に未反映でないか、給排水管・EVの更新が目前でないかを長期修繕計画で確認してください。`]);
+  if(cM){const cmu=cM/myA;
+   if(cmu<gL)al.push(['w',`管理費が推計レンジ（${gL}〜${gH}円/㎡）を下回ります。<b>安い管理費は管理水準低下のサイン</b>のことがあります。管理員の勤務形態・清掃回数・設備点検頻度・委託契約の内容を確認してください。駐車場使用料からの充当で見かけ上安くなっている場合もあります（全国平均は充当を除くと11,503円、含むと17,103円）。`]);
+   else if(cmu>gH)al.push(['i','管理費の超過＝割高ではありません。共用施設の充実度で正当に上振れます。']);}
+  $('alerts').innerHTML=al.map(a=>`<div class="al al-${a[0]}">${a[1]}</div>`).join('');
+
+  txt=`【管理費・修繕積立金 適正額試算】
+物件：${P.title}（${P.src}）
+築${year?year+'年':'不明'}／${Y(units)}戸／地上${P.floors?Y(P.floors)+'階':'不明'}／専有${N(myA)}㎡
+専有合計${Y(tot)}㎡ → 建築延床${Y(fa)}㎡${isDir?'(記載値)':'(推定÷'+COEF+')'} → ${T.label}
+■修繕積立金 適正額：平均 ${N(avg)}円/㎡・月 ＝ 月${Y(avg*myA)}円
+　適正レンジ ${N(lo)}〜${N(hi)}円/㎡ ＝ 月${Y(lo*myA)}〜${Y(hi*myA)}円
+${rv?`　現況 月${Y(cR)}円＝${N(rv.u)}円/㎡ → ${rv.lab}／平均まで月${Y(Math.max(0,avg-rv.u)*myA)}円・年${Y(Math.max(0,avg-rv.u)*myA*12)}円不足\n`:''}■管理費 目安（推計・国の目安なし）：${gL}〜${gH}円/㎡ ＝ 月${Y(gL*myA)}〜${Y(gH*myA)}円
+${mv?`　現況 月${Y(cM)}円＝${N(mv.u)}円/㎡ → ${mv.lab}\n`:''}${M?`■実勢：${M.l}完成 月${Y(M.r)}円/戸（約${N(M.r/70)}円/㎡）${M.est?'※推計':''}／全国平均 月13,054円/戸\n`:''}※マイソクからの自動読み取りによる簡易試算。確定判断には長期修繕計画・重要事項調査報告書の確認が必要です。`;
+}
+
+/* ===== マイソク解析（テキスト→項目） ===== */
+const MysokuParser=(()=>{
+ const ERA={'明治':1867,'大正':1911,'昭和':1925,'平成':1988,'令和':2018,M:1867,T:1911,S:1925,H:1988,R:2018};
+ const NOW=new Date().getFullYear();
+ function norm(s){
+   return String(s).normalize('NFKC')
+     .replace(/戶/g,'戸')                                   // ⼾(康熙部首)→戶→戸
+     .replace(/筑(?=\s*年)/g,'築')                          // OCRの誤読「筑年月」
+     .replace(/[‐‑‒–—―−ー](?=\d)/g,'-');
+ }
+ const MONEY='(\\d+万(?:\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)?|\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)';
+ function yen(s){
+   s=s.replace(/,/g,'');
+   let m=s.match(/^(\d+)万(?:(\d+)千|(\d+))?$/);
+   if(m)return +m[1]*10000+(m[2]?+m[2]*1000:0)+(m[3]?+m[3]:0);
+   m=s.match(/^(\d+)千$/);
+   return m? +m[1]*1000 : +s;
+ }
+ function firstValid(F,res,fn,ok){
+   for(const re of res){
+     const g=new RegExp(re.source,'g');let m;
+     while((m=g.exec(F))){const v=fn(m);if(v!=null&&ok(v))return {v,src:m[0]};}
+   }
+   return null;
+ }
+ function parseDate(seg){
+   const w=seg.match(/((?:19|20)\d{2})(?:年|[.\/-])(?:\([^)]{0,10}\))?(\d{1,2})?/);
+   const e=seg.match(/(明治|大正|昭和|平成|令和|[MTSHR])\.?(元|\d{1,2})(?:年|[.\/-])(\d{1,2})?/);
+   const cand=[];
+   if(w)cand.push({i:w.index,y:+w[1],mo:w[2]?+w[2]:null});
+   if(e)cand.push({i:e.index,y:ERA[e[1]]+(e[2]==='元'?1:+e[2]),mo:e[3]?+e[3]:null});
+   cand.sort((a,b)=>a.i-b.i);
+   const c=cand.find(c=>c.y>=1950&&c.y<=NOW+3);
+   return c?{y:c.y,mo:(c.mo>=1&&c.mo<=12)?c.mo:null}:null;
+ }
+ function parse(text){
+   const T=norm(text);
+   const F=T.replace(/\s+/g,'')
+     .replace(/(\d)[、､,](?=\d{3}(?!\d))/g,'$1,')               // OCRの「10、000」
+     .replace(/(\d)\.(?=\d{3}(?:[.,]\d{3})*円)/g,'$1,');        // OCRの「12.300円」
+   const r={};
+   // 築年月
+   let d=null;
+   const lab=/(建築年月|築年月|完成年月|竣工年月|新築年月|築年|竣工|完成)/g;let lm;
+   while(!d&&(lm=lab.exec(F)))d=parseDate(F.slice(lm.index+lm[0].length,lm.index+lm[0].length+28));
+   if(!d){const m=F.match(/((?:19|20)\d{2}年(?:\([^)]{0,10}\))?(?:\d{1,2}月)?|(?:昭和|平成|令和|[SHR])\.?(?:元|\d{1,2})[年.](?:\d{1,2}月?)?)(?:築|竣工|完成)/);
+     if(m)d=parseDate(m[1]);}
+   if(d)r.year={v:d.y,label:`${d.y}年${d.mo?d.mo+'月':''}`};
+   // 地上階数
+   const fl=firstValid(F,[/地上(?:階層|階数)?[:：]?(\d{1,2})階/,/(\d{1,2})階(?:地下\d{1,2}階)?建/,/(\d{1,2})階建/],m=>+m[1],v=>v>=2&&v<=70);
+   if(fl)r.floors={v:fl.v,label:`${fl.v}階`};
+   // 総戸数
+   const un=firstValid(F,[/総戸数[^\d]{0,6}?(\d{1,4})戸/,/総戸数[^\d]{0,6}?(\d{1,4})/,/全(\d{1,4})戸/],m=>+m[1],v=>v>=2&&v<=3000);
+   if(un)r.units={v:un.v,label:`${un.v}戸`};
+   // 専有面積
+   let ar=firstValid(F,[/専有面積[^\d]{0,12}?(\d{2,3}(?:\.\d{1,3})?)/,/専有[^\d]{0,6}?(\d{2,3}\.\d{1,3})/],m=>+m[1],v=>v>=15&&v<=300);
+   if(ar)r.area={v:ar.v,label:`${ar.v}㎡`};
+   // 管理費・修繕積立金（「管理費・修繕積立金 合計」を拾わない）
+   const mg=firstValid(F,[new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'円'),new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'(?=/月|\\(月)')],m=>yen(m[1]),v=>v>=1000&&v<=150000);
+   if(mg)r.mgmt={v:mg.v,label:`${mg.v.toLocaleString('ja-JP')}円/月`};
+   const rp=firstValid(F,[new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'円'),new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'(?=/月|\\(月)'),new RegExp('修繕(?:積立)?費[^\\d管計基]{0,10}?'+MONEY+'円')],
+     m=>/管理費等?[・･&と及\/]?$/.test(F.slice(Math.max(0,m.index-5),m.index))?null:yen(m[1]),v=>v>=500&&v<=200000);
+   if(rp)r.repair={v:rp.v,label:`${rp.v.toLocaleString('ja-JP')}円/月`};
+   // 建築延床面積
+   const fa=firstValid(F,[/延(?:べ)?床面積[^\d]{0,10}?(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d{3,6}(?:\.\d+)?)/],m=>+m[1].replace(/,/g,''),v=>v>=300&&v<=400000);
+   if(fa&&r.units&&r.area&&fa.v>=r.units*r.area.v*0.6)r.floorArea={v:fa.v,label:`${fa.v.toLocaleString('ja-JP')}㎡`};
+   // 機械式駐車場
+   if(/機械式|立体駐車|タワーパーキング|昇降式|パズル式/.test(F))r.mech={v:true,label:'記載あり'};
+   // 物件種別
+   const mansionHint=/マンション|総戸数|管理費|修繕積立金|専有面積|所在階|管理形態|管理会社/.test(F);
+   const houseHint=/戸建|一戸建|建売|売地|土地売買|建築条件|古家付|更地|借地|貸家|アパート|一棟|利回り/.test(F);
+   r.kind = (r.repair||r.mgmt||r.area) ? 'mansion'
+          : houseHint ? 'house'
+          : mansionHint ? 'mansion' : 'other';
+   if(/中古戸建|新築戸建|一戸建|戸建住宅/.test(F)&&!r.repair&&!r.mgmt)r.kind='house';
+   // 物件名
+   let name='';
+   const nm=T.match(/(?:物件名|建物名|マンション名)[^\S\n]*[:：]?[^\S\n]*([^\s■●:：|｜]{2,40})/);
+   if(nm&&!/^(種別|所在|価格|現況)/.test(nm[1]))name=nm[1];
+   if(!name){
+     // OCRは「グラ ン メ ゾン 7 階」のように空白が入るので、日本語の前後の空白を詰める
+     const lines=T.split('\n').map(s=>s.replace(/\s+(?=[^\x00-\x7F])|(?<=[^\x00-\x7F])\s+/g,'').replace(/(\d)\s+(?=\d)/g,'$1').trim()).filter(Boolean);
+     for(const l of lines.slice(0,40)){
+       const m=l.match(/^([^\d■●:：()（）]{3,30}?)\s*(\d{1,2}階|\d{3,4}号室?)$/);
+       if(m&&!/円|価格|専有|所在|階建|地上|構造|総戸数/.test(m[1])){name=m[1].trim();break;}
+     }
+   }
+   if(name)r.name={v:name,label:name};
+   // 所在地
+   const ad=T.match(/(?:所在地|物件所在|所在\(住居表示\)|住居表示|所在)[^\S\n]*[:：]?\s*((?:東京都|北海道|京都府|大阪府|[^\s\d]{2,3}県)?[^\s\d■●:：]{1,8}?[市郡区][^\s■●]{1,24})/);
+   if(ad)r.addr={v:ad[1],label:ad[1]};
+   return r;
+ }
+ return {parse,norm};
+})();
+
+/* ===== PDF / 画像の読み込み ===== */
+const PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';   // cdnjsにはcMap（日本語フォントの文字コード表）が無いためjsDelivr
+const TESS='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+const loaded={};
+function loadScript(src){
+  return loaded[src]||(loaded[src]=new Promise((ok,ng)=>{const s=document.createElement('script');
+    s.src=src;s.onload=ok;s.onerror=()=>{delete loaded[src];ng(new Error('ライブラリを読み込めませんでした（通信環境を確認してください）'));};
+    document.head.appendChild(s);}));
+}
+function stat(t,p){
+  $('ostat').classList.add('on');$('ostatT').textContent=t;
+  $('obar').style.width=(p==null?0:Math.round(p*100))+'%';
+}
+let ocrWorker=null, ocrHook=null;
+async function getOcr(){
+  if(ocrWorker)return ocrWorker;
+  await loadScript(TESS);
+  ocrWorker=await Tesseract.createWorker('jpn',1,{logger:m=>{if(m.status==='recognizing text'&&ocrHook)ocrHook(m.progress);}});
+  return ocrWorker;
+}
+async function ocrCanvas(c,onP){ocrHook=onP;const w=await getOcr();const {data}=await w.recognize(c);ocrHook=null;return data.text;}
+async function renderPage(pg){
+  const vp0=pg.getViewport({scale:1});
+  const sc=Math.min(4,2400/Math.max(vp0.width,vp0.height)), vp=pg.getViewport({scale:sc});
+  const c=document.createElement('canvas');c.width=vp.width;c.height=vp.height;
+  const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  await pg.render({canvasContext:ctx,viewport:vp}).promise;return c;
+}
+function imgCanvas(file){
+  return new Promise((ok,ng)=>{const url=URL.createObjectURL(file),i=new Image();
+    i.onload=()=>{const sc=Math.min(3,Math.max(1,2400/Math.max(i.width,i.height)));
+      const c=document.createElement('canvas');c.width=i.width*sc;c.height=i.height*sc;
+      const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(i,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);ok(c);};
+    i.onerror=()=>{URL.revokeObjectURL(url);ng(new Error('画像を開けませんでした'));};i.src=url;});
+}
+const CORE=['year','floors','units','area','mgmt','repair'];
+const hitCount=r=>CORE.filter(k=>r[k]).length;
+function merge(a,b){for(const k in b){if(k==='kind')continue;if(!a[k]){a[k]=b[k];a[k].ocr=true;}}
+  a.kind=(a.repair||a.mgmt||a.area)?'mansion':(b.kind!=='other'?b.kind:a.kind);return a;}
+
+let items=[], sel=-1, runId=0;
+function addItem(r,src,mode){
+  const it={src,mode,kind:r.kind,read:r,text:r._text,
+    title:r.name?r.name.v:(r.addr?r.addr.v:src),
+    addr:r.addr?r.addr.v:'',
+    year:r.year&&r.year.v, floors:r.floors&&r.floors.v, units:r.units&&r.units.v, area:r.area&&r.area.v,
+    mgmt:r.mgmt&&r.mgmt.v, repair:r.repair&&r.repair.v, floorArea:r.floorArea&&r.floorArea.v, mech:!!r.mech};
+  items.push(it);
+  renderList();
+  if(sel<0&&it.kind==='mansion'&&core(it))select(items.length-1);
+}
+async function readFiles(files){
+  const my=++runId;
+  items=[];sel=-1;$('detail').style.display='none';renderList();
+  // ページ総数を先に数える
+  const jobs=[];
+  for(const f of files){
+    if(f.type==='application/pdf'||/\.pdf$/i.test(f.name)){
+      stat(`${f.name} を開いています…`,0.01);
+      await loadScript(PDFJS+'build/pdf.min.js');
+      pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'build/pdf.worker.min.js';
+      const doc=await pdfjsLib.getDocument({data:await f.arrayBuffer(),cMapUrl:PDFJS+'cmaps/',cMapPacked:true,
+        standardFontDataUrl:PDFJS+'standard_fonts/'}).promise;
+      for(let i=1;i<=doc.numPages;i++)jobs.push({f,doc,i,n:doc.numPages});
+    }else if(/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|bmp)$/i.test(f.name)){
+      jobs.push({f,img:true});
+    }else throw new Error(`${f.name} はPDF・画像ではありません`);
+  }
+  const multi=files.length>1;
+  for(let j=0;j<jobs.length;j++){
+    if(my!==runId)return;
+    const J=jobs[j], base=(p,lab)=>stat(`${jobs.length>1?`${j+1}/${jobs.length}件目 `:''}${lab}`,(j+p)/jobs.length);
+    const src=J.img?J.f.name:(multi?`${J.f.name} `:'')+(J.n>1?`${J.i}ページ目`:J.f.name);
+    let r,mode,t='',t2='';
+    if(J.img){
+      base(0,'画像を読み取り中（OCR）…');
+      r=MysokuParser.parse(t2=await ocrCanvas(await imgCanvas(J.f),p=>base(p,`画像を読み取り中（OCR ${Math.round(p*100)}%）`)));
+      for(const k in r)if(r[k]&&typeof r[k]==='object')r[k].ocr=true;mode='OCR';
+    }else{
+      base(0,'文字を抽出中…');
+      const pg=await J.doc.getPage(J.i);
+      const tc=await pg.getTextContent();
+      t=tc.items.map(x=>x.str+(x.hasEOL?'\n':'')).join('');
+      r=MysokuParser.parse(t);mode='PDFテキスト';
+      const dense=t.replace(/\s/g,'').length;
+      // 文字がほぼ無い（画像だけ）か、マンションなのに必須項目が欠けているページだけOCR
+      if(dense<120||(r.kind==='mansion'&&hitCount(r)<CORE.length)){
+        base(0.05,'画像として読み取り中（OCR）…');
+        t2=await ocrCanvas(await renderPage(pg),p=>base(p,`画像として読み取り中（OCR ${Math.round(p*100)}%）`));
+        const r2=MysokuParser.parse(t2);
+        mode=dense<30?'OCR':'PDFテキスト＋OCR';
+        r=merge(r,r2);                 // 文字情報を優先し、足りない項目だけOCRで補う
+      }
+      pg.cleanup();
+    }
+    r._text=t+(t2?'\n----OCR----\n'+t2:'');
+    addItem(r,src,mode);
+  }
+  stat(`読み取り完了：${jobs.length}${jobs.length>1?'ページ／件':'件'}`,1);
+  setTimeout(()=>{if(my===runId)$('ostat').classList.remove('on');},1500);
+  if(sel<0){const k=items.findIndex(x=>x.kind==='mansion');if(k>=0)select(k);}
+}
+
+/* ===== 一覧 ===== */
+function status(it){
+  if(it.kind!=='mansion')return {cls:'na',lab:it.kind==='house'?'対象外（戸建・土地等）':'対象外（物件情報なし）'};
+  const C=core(it);
+  if(!C){const miss=[!it.units&&'総戸数',!it.area&&'専有面積'].filter(Boolean);
+    return {cls:'ng',lab:`判定不可：${miss.join('・')}が読み取れず`};}
+  return {C};
+}
+function renderList(){
+  $('listPanel').style.display=items.length?'':'none';
+  $('acts').style.display=items.some(x=>x.kind==='mansion')?'':'none';
+  const ms=items.filter(x=>x.kind==='mansion').length;
+  $('listSum').textContent=items.length?`${items.length}件中 マンション ${ms}件`:'';
+  $('plist').innerHTML=items.map((it,i)=>{
+    const s=status(it);
+    const spec=[it.year&&it.year+'年築',it.floors&&it.floors+'階建',it.units&&it.units+'戸',it.area&&it.area+'㎡'].filter(Boolean).join('・');
+    let right;
+    if(s.C){const {rv,mv}=s.C;
+      right=`<div class="pv"><span class="pk">修繕</span>${rv?`<span class="vb ${rv.cls}">${rv.lab}</span><span class="pn">${Y(it.repair)}円・${N(rv.u)}円/㎡</span>`:'<span class="vb v-na">読取不可</span>'}</div>
+             <div class="pv"><span class="pk">管理</span>${mv?`<span class="vb ${mv.cls}">${mv.lab}</span><span class="pn">${Y(it.mgmt)}円・${N(mv.u)}円/㎡</span>`:'<span class="vb v-na">読取不可</span>'}</div>`;
+    }else right=`<div class="pv"><span class="vb ${s.cls==='ng'?'v-lo':'v-na'}">${s.lab}</span></div>`;
+    return `<div class="pi${i===sel?' on':''}${s.C?'':' dim'}" data-i="${i}" ${s.C||s.cls==='ng'?'role="button" tabindex="0"':''}>
+      <div class="pl"><div class="pno">${i+1}</div><div><div class="pt2">${esc(it.title)}</div>
+        <div class="ps2">${esc(it.src)}${spec?'　'+spec:''}${it.mode!=='PDFテキスト'?'　<span class="otag est">'+it.mode+'</span>':''}</div></div></div>
+      <div class="pr">${right}</div></div>`;}).join('');
+}
+function select(i){
+  const it=items[i];if(!it||it.kind!=='mansion')return;
+  sel=i;renderList();$('detail').style.display='';render(it);
+}
+$('plist').addEventListener('click',e=>{const p=e.target.closest('.pi');if(p)select(+p.dataset.i);
+  if(p&&window.innerWidth<900)$('detail').scrollIntoView({behavior:'smooth'});});
+$('plist').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=e.target.closest('.pi');if(p)select(+p.dataset.i);}});
+
+function readGrid(P){
+  const r=P.read, tag=x=>x?`<span class="otag ${x.ocr?'est':'ok'}">${x.ocr?'OCR':'読取'}</span>`:'<span class="otag ng">未検出</span>';
+  const f=(k,lab,alt)=>`<div class="orow"><span class="k">${lab}</span><span class="val">${r[k]?esc(r[k].label):(alt||'—')}</span>${r[k]||!alt?tag(r[k]):'<span class="otag est">推定</span>'}</div>`;
+  const anyOcr=CORE.some(k=>r[k]&&r[k].ocr);
+  return `<p class="cap">マイソクから読み取った値（${esc(P.mode)}）</p><div class="ogrid">`+
+    f('year','築年月')+f('floors','地上階数')+f('units','総戸数')+f('area','専有面積')+
+    f('mgmt','管理費')+f('repair','修繕積立金')+f('floorArea','建築延床','専有×戸数÷0.78')+
+    `<div class="orow"><span class="k">機械式駐車</span><span class="val">${P.mech?'記載あり':'記載なし'}</span><span></span></div></div>`+
+    (anyOcr?'<div class="onote">OCR（画像の文字認識）で読んだ値は誤読の可能性があります。<b>マイソクの数値と一致しているか確認</b>してください。</div>':'');
+}
+
+/* ===== 操作 ===== */
+async function handleFiles(list){
+  const files=[...list||[]];if(!files.length)return;
+  const drop=$('drop');drop.classList.add('busy');
+  try{await readFiles(files);}
+  catch(e){console.error(e);stat('読み取りに失敗しました：'+(e.message||e),0);}
+  finally{drop.classList.remove('busy');$('fileIn').value='';}
+}
+(()=>{const d=$('drop'),fi=$('fileIn');
+  fi.addEventListener('change',()=>handleFiles(fi.files));
   ['dragenter','dragover'].forEach(t=>d.addEventListener(t,e=>{e.preventDefault();d.classList.add('over');}));
   ['dragleave','drop'].forEach(t=>d.addEventListener(t,e=>{e.preventDefault();d.classList.remove('over');}));
-  d.addEventListener('drop',e=>handleFile(e.dataTransfer.files[0]));
-  // ドロップ枠の外に落としてもブラウザでPDFが開かないようにする
+  d.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
+  // 枠の外に落としてもブラウザでPDFが開かないようにし、そのまま読み取る
   window.addEventListener('dragover',e=>e.preventDefault());
-  window.addEventListener('drop',e=>{e.preventDefault();if(e.target.closest&&!e.target.closest('#drop'))handleFile(e.dataTransfer.files[0]);});
+  window.addEventListener('drop',e=>{e.preventDefault();if(!(e.target.closest&&e.target.closest('#drop')))handleFiles(e.dataTransfer.files);});
 })();
-document.getElementById('printBtn').addEventListener('click',()=>{
-  const d=new Date();
-  document.getElementById('printDate').textContent=
-    `　作成日 ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
+$('printBtn').addEventListener('click',()=>{
+  const d=new Date();$('printDate').textContent=`　作成日 ${d.getFullYear()}.${d.getMonth()+1}.${d.getDate()}`;
   window.print();});
-document.getElementById('copyBtn').addEventListener('click',async function(){
-  try{await navigator.clipboard.writeText(txt);this.textContent='コピーしました';}
-  catch(e){const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();
-    try{document.execCommand('copy');this.textContent='コピーしました';}catch(_){this.textContent='失敗';}
-    document.body.removeChild(t);}
-  setTimeout(()=>{this.textContent='テキストでコピー';},1600);});
-calc();
+async function copyText(btn,t,label){
+  try{await navigator.clipboard.writeText(t);btn.textContent='コピーしました';}
+  catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();
+    try{document.execCommand('copy');btn.textContent='コピーしました';}catch(_){btn.textContent='失敗';}
+    document.body.removeChild(a);}
+  setTimeout(()=>{btn.textContent=label;},1600);
+}
+$('copyBtn').addEventListener('click',function(){copyText(this,txt,'テキストでコピー');});
+$('copyAllBtn').addEventListener('click',function(){
+  const head=['No','読取元','物件名','所在地','築年','地上階数','総戸数','専有㎡','管理費/月','修繕積立金/月','修繕 円/㎡','目安平均 円/㎡','目安下限 円/㎡','修繕積立金判定','管理費 円/㎡','管理費目安 円/㎡','管理費判定','備考'];
+  const rows=items.map((it,i)=>{const s=status(it),C=s.C;
+    return [i+1,it.src,it.title,it.addr,it.year||'',it.floors||'',it.units||'',it.area||'',it.mgmt||'',it.repair||'',
+      C&&C.rv?N(C.rv.u):'',C?C.avg:'',C?C.lo:'',C?(C.rv?C.rv.lab:'読取不可'):s.lab,
+      C&&C.mv?N(C.mv.u):'',C?`${C.gL}〜${C.gH}`:'',C?(C.mv?C.mv.lab:'読取不可'):'',
+      [it.mode!=='PDFテキスト'?it.mode:'',it.mech?'機械式駐車場あり(未加算)':'',C&&!C.isDir?'延床推定':''].filter(Boolean).join(' ')].join('\t');});
+  copyText(this,[head.join('\t'),...rows].join('\n'),'一覧をExcel用にコピー');
+});
 </script>
 </body>
+
 </html>
