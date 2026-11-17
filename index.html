@@ -534,7 +534,7 @@ const MysokuParser=(()=>{
  function norm(s){
    return String(s).normalize('NFKC')
      .replace(/戶/g,'戸')                                   // ⼾(康熙部首)→戶→戸
-     .replace(/筑(?=\s*年)/g,'築')                          // OCRの誤読「筑年月」
+     .replace(/[筑先策蓄案](?=\s*年\s*月)/g,'築')             // OCRの誤読「筑年月」「先年月」
      .replace(/[‐‑‒–—―−ー](?=\d)/g,'-');
  }
  const MONEY='(\\d+万(?:\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)?|\\d+千|\\d{1,3}(?:,\\d{3})+|\\d+)';
@@ -574,20 +574,39 @@ const MysokuParser=(()=>{
    while(!d&&(lm=lab.exec(F)))d=parseDate(F.slice(lm.index+lm[0].length,lm.index+lm[0].length+28));
    if(!d){const m=F.match(/((?:19|20)\d{2}年(?:\([^)]{0,10}\))?(?:\d{1,2}月)?|(?:昭和|平成|令和|[SHR])\.?(?:元|\d{1,2})[年.](?:\d{1,2}月?)?)(?:築|竣工|完成)/);
      if(m)d=parseDate(m[1]);}
+   // 「2019年5月(令和元年5月)」のような西暦＋和暦の併記は築年月であることが多い
+   if(!d){const m=F.match(/((?:19|20)\d{2})年(\d{1,2})月\((?:昭和|平成|令和)/);if(m)d={y:+m[1],mo:+m[2]};}
    if(d)r.year={v:d.y,label:`${d.y}年${d.mo?d.mo+'月':''}`};
    // 地上階数
    const fl=firstValid(F,[/地上(?:階層|階数)?[:：]?(\d{1,2})階/,/(\d{1,2})階(?:地下\d{1,2}階)?建/,/(\d{1,2})階建/],m=>+m[1],v=>v>=2&&v<=70);
    if(fl)r.floors={v:fl.v,label:`${fl.v}階`};
    // 総戸数
-   const un=firstValid(F,[/総戸数[^\d]{0,6}?(\d{1,4})戸/,/総戸数[^\d]{0,6}?(\d{1,4})/,/全(\d{1,4})戸/],m=>+m[1],v=>v>=2&&v<=3000);
+   let un=firstValid(F,[/総戸数[^\d]{0,6}?(\d{1,4})戸/,/総戸数[^\d]{0,6}?(\d{1,4})(?![\d.,]|m2|m²|平米)/,/全(\d{1,4})戸/],m=>+m[1],v=>v>=2&&v<=3000);
+   // 項目名と値が離れた表：単独の「99戸」（「戸建」「各戸」「戸数」は除く）
+   if(!un)un=firstValid(F,[/(?<![\d.,各毎全])(\d{1,4})戸(?![建数別当])/],m=>+m[1],v=>v>=4&&v<=3000);
    if(un)r.units={v:un.v,label:`${un.v}戸`};
    // 専有面積
-   let ar=firstValid(F,[/専有面積[^\d]{0,12}?(\d{2,3}(?:\.\d{1,3})?)/,/専有[^\d]{0,6}?(\d{2,3}\.\d{1,3})/],m=>+m[1],v=>v>=15&&v<=300);
+   const UNIT='(?:m2|m²|㎡|平米|平方メートル|nf|rf|mf|ni|m)';
+   const OTHER_AREA=/^(?:m2|m²|㎡|平米)?(?:\([^)]{0,8}\))?(?:バルコニー|ルーフ|テラス|ポーチ|アルコ|専用庭|トランク)/;
+   // 「71.77㎡ 専有面積 16.52㎡ バルコニー面積」のように値が項目名の前に来るレイアウトがある。
+   // 項目名の後ろの値がバルコニー等の項目名に続き、かつ前側に値があるときだけ前側を採用する
+   const before=firstValid(F,[new RegExp('(\\d{2,3}\\.\\d{1,3})'+UNIT+'?(?:\\(壁芯\\))?専有面積')],m=>+m[1],v=>v>=15&&v<=300);
+   let followedByOther=false;
+   let ar=firstValid(F,[/専有面積[^\d]{0,12}?(\d{2,3}(?:\.\d{1,3})?)/,/専有[^\d]{0,6}?(\d{2,3}\.\d{1,3})/],
+     m=>{followedByOther=OTHER_AREA.test(F.slice(m.index+m[0].length,m.index+m[0].length+14));return +m[1];},v=>v>=15&&v<=300);
+   if(before&&(!ar||followedByOther))ar=before;
+   if(!ar)ar=firstValid(F,[/壁芯[^\d]{0,3}(\d{2,3}\.\d{1,3})/],m=>+m[1],v=>v>=15&&v<=300);
+   // 最後の手段：単位付きの面積のうち、バルコニー等ではないもの
+   if(!ar){const g=new RegExp('(\\d{2,3}\\.\\d{1,3})'+UNIT+'(?![a-z])','g');let m;
+     while((m=g.exec(F))){const pre=F.slice(Math.max(0,m.index-14),m.index);
+       if(/バルコニー|ポーチ|ルーフ|テラス|アルコ|トランク|延床|敷地|土地|庭|物置|倉庫|公簿|持分/.test(pre))continue;
+       if(OTHER_AREA.test(F.slice(m.index+m[0].length,m.index+m[0].length+14)))continue;
+       const v=+m[1];if(v>=15&&v<=300){ar={v,src:m[0]};break;}}}
    if(ar)r.area={v:ar.v,label:`${ar.v}㎡`};
    // 管理費・修繕積立金（「管理費・修繕積立金 合計」を拾わない）
    const mg=firstValid(F,[new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'円'),new RegExp('管理費(?:等)?[^\\d修積計]{0,10}?'+MONEY+'(?=/月|\\(月)')],m=>yen(m[1]),v=>v>=1000&&v<=150000);
    if(mg)r.mgmt={v:mg.v,label:`${mg.v.toLocaleString('ja-JP')}円/月`};
-   const rp=firstValid(F,[new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'円'),new RegExp('修繕積立金[^\\d管計基]{0,10}?'+MONEY+'(?=/月|\\(月)'),new RegExp('修繕(?:積立)?費[^\\d管計基]{0,10}?'+MONEY+'円')],
+   const rp=firstValid(F,[new RegExp('修繕積立金[^\\d管計基総]{0,10}?'+MONEY+'円'),new RegExp('修繕積立金[^\\d管計基総]{0,10}?'+MONEY+'(?=/月|\\(月)'),new RegExp('修.積立金[^\\d管計基総]{0,10}?'+MONEY+'円'),new RegExp('修繕(?:積立)?費[^\\d管計基]{0,10}?'+MONEY+'円')],
      m=>/管理費等?[・･&と及\/]?$/.test(F.slice(Math.max(0,m.index-5),m.index))?null:yen(m[1]),v=>v>=500&&v<=200000);
    if(rp)r.repair={v:rp.v,label:`${rp.v.toLocaleString('ja-JP')}円/月`};
    // 建築延床面積
@@ -598,9 +617,9 @@ const MysokuParser=(()=>{
    // 物件種別
    const mansionHint=/マンション|総戸数|管理費|修繕積立金|専有面積|所在階|管理形態|管理会社/.test(F);
    const houseHint=/戸建|一戸建|建売|売地|土地売買|建築条件|古家付|更地|借地|貸家|アパート|一棟|利回り/.test(F);
-   r.kind = (r.repair||r.mgmt||r.area) ? 'mansion'
+   r.kind = (r.repair||r.mgmt) ? 'mansion'
           : houseHint ? 'house'
-          : mansionHint ? 'mansion' : 'other';
+          : (mansionHint||r.area) ? 'mansion' : 'other';
    if(/中古戸建|新築戸建|一戸建|戸建住宅/.test(F)&&!r.repair&&!r.mgmt)r.kind='house';
    // 物件名
    let name='';
@@ -610,14 +629,15 @@ const MysokuParser=(()=>{
      // OCRは「グラ ン メ ゾン 7 階」のように空白が入るので、日本語の前後の空白を詰める
      const lines=T.split('\n').map(s=>s.replace(/\s+(?=[^\x00-\x7F])|(?<=[^\x00-\x7F])\s+/g,'').replace(/(\d)\s+(?=\d)/g,'$1').trim()).filter(Boolean);
      for(const l of lines.slice(0,40)){
-       const m=l.match(/^([^\d■●:：()（）]{3,30}?)\s*(\d{1,2}階|\d{3,4}号室?)$/);
-       if(m&&!/円|価格|専有|所在|階建|地上|構造|総戸数/.test(m[1])){name=m[1].trim();break;}
+       const m=l.replace(/^[|｜\/>＞・\-–_\s]+/,'').match(/^([^\d■●:：()（）|｜][^■●:：|｜]{2,30}?)\s*(\d{1,2}階|\d{3,4}号室?)(?:\s*\d{1,2}階)?(?:\s*\S{1,3}向き?)?$/);
+       if(m&&!/円|価格|専有|所在|階建|地上|構造|総戸数|住所|部分/.test(m[1])){name=m[1].trim();break;}
      }
    }
+   name=name.replace(/^[|｜\/>＞・\-–_\s]+/,'');
    if(name)r.name={v:name,label:name};
    // 所在地
    const ad=T.match(/(?:所在地|物件所在|所在\(住居表示\)|住居表示|所在)[^\S\n]*[:：]?\s*((?:東京都|北海道|京都府|大阪府|[^\s\d]{2,3}県)?[^\s\d■●:：]{1,8}?[市郡区][^\s■●]{1,24})/);
-   if(ad)r.addr={v:ad[1],label:ad[1]};
+   if(ad){const a=ad[1].replace(/^[|｜\/>＞・\-–_\s]+/,'');r.addr={v:a,label:a};}
    return r;
  }
  return {parse,norm};
@@ -661,8 +681,22 @@ function imgCanvas(file){
 }
 const CORE=['year','floors','units','area','mgmt','repair'];
 const hitCount=r=>CORE.filter(k=>r[k]).length;
-function merge(a,b){for(const k in b){if(k==='kind')continue;if(!a[k]){a[k]=b[k];a[k].ocr=true;}}
-  a.kind=(a.repair||a.mgmt||a.area)?'mansion':(b.kind!=='other'?b.kind:a.kind);return a;}
+// PDFの文字を座標で並べ直し、見た目の行単位にする（表のセルが別々に格納されているPDF対策）
+function geoText(tc){
+  const its=tc.items.filter(i=>i.str&&i.str.trim()&&Math.abs(i.transform[1])<1e-3)
+    .map(i=>({s:i.str,x:i.transform[4],y:i.transform[5],h:Math.abs(i.transform[3])||i.height||8}));
+  its.sort((a,b)=>b.y-a.y||a.x-b.x);
+  const lines=[];
+  for(const it of its){
+    let L=null;
+    for(let k=lines.length-1;k>=0&&k>=lines.length-6;k--){const l=lines[k];if(Math.abs(l.y-it.y)<=Math.min(l.h,it.h)*0.45){L=l;break;}}
+    if(L)L.items.push(it);else lines.push({y:it.y,h:it.h,items:[it]});
+  }
+  return lines.map(l=>l.items.sort((a,b)=>a.x-b.x).map(i=>i.s).join(' ')).join('\n');
+}
+function merge(a,b,ocr=true){for(const k in b){if(k==='kind')continue;if(!a[k]){a[k]=b[k];if(ocr)a[k].ocr=true;}}
+  const ks=[a.kind,b.kind];
+  a.kind=(a.repair||a.mgmt)?'mansion':ks.includes('house')?'house':ks.includes('mansion')?'mansion':'other';return a;}
 
 let items=[], sel=-1, runId=0;
 function addItem(r,src,mode){
@@ -707,7 +741,10 @@ async function readFiles(files){
       const pg=await J.doc.getPage(J.i);
       const tc=await pg.getTextContent();
       t=tc.items.map(x=>x.str+(x.hasEOL?'\n':'')).join('');
-      r=MysokuParser.parse(t);mode='PDFテキスト';
+      const tg=geoText(tc);
+      // 見た目どおりの行（表の「項目 値」が隣り合う）を優先し、元の並び順で補う
+      r=merge(MysokuParser.parse(tg),MysokuParser.parse(t),false);mode='PDFテキスト';
+      t=tg+'\n----STREAM----\n'+t;
       const dense=t.replace(/\s/g,'').length;
       // 文字がほぼ無い（画像だけ）か、マンションなのに必須項目が欠けているページだけOCR
       if(dense<120||(r.kind==='mansion'&&hitCount(r)<CORE.length)){
